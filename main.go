@@ -1,13 +1,14 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
-	_ "github.com/mattn/go-sqlite3"
 	"log"
 	"net/http"
 
+	_ "github.com/mattn/go-sqlite3"
+
 	api "github.com/tnbl265/zooweeper/server/api"
+	dbrepo "github.com/tnbl265/zooweeper/server/database/dbrepo"
 )
 
 const port = 8080
@@ -21,11 +22,13 @@ func main() {
 
 	// Connect to the Database
 	log.Println("Connecting to sqlite3 database")
-	db, err := sql.Open("sqlite3", "zooweeper-database.db")
+	db, err := app.OpenDB()
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer db.Close()
+	app.DB = &dbrepo.SQLiteDBRepo{DB: db}
+	//close when it is done
+	defer app.DB.Connection().Close()
 
 	// Start a Web Server
 	log.Println("Starting application on port", port)

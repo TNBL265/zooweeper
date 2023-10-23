@@ -1,0 +1,77 @@
+{
+	"info": {
+		"_postman_id": "fcab09a8-c7db-446d-8b36-799db0fc89bf",
+		"name": "distributed",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "16351421",
+		"_collection_link": "https://qlassroompostman.postman.co/workspace/Team-Workspace~2c7d2051-4942-423d-8e24-1504063b8b90/collection/16351421-fcab09a8-c7db-446d-8b36-799db0fc89bf?action=share&source=collection_link&creator=16351421"
+	},
+	"item": [
+		{
+			"name": "Express Client",
+			"item": [
+				{
+					"name": "Update Score",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"minute\": 28,\r\n    \"player\": \"leroy sane\",\r\n    \"club\": \"FCB\",\r\n    \"score\": \"0-1\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:9092/updateScore",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "9092",
+							"path": [
+								"updateScore"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Zookeeper",
+			"item": [
+				{
+					"name": "New Request",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"senderIp\": \"http://localhost:1000\",\r\n    \"receiverIp\": \"http://localhost:8080\",\r\n    \"timestamp\": 10,\r\n    \"attempts\": 1,\r\n    \"event\": {\"minute\": 28,\"player\": \"leroy sane\",\"club\": \"FCB\",\"score\": \"0-1\"}\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/updateScore",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"updateScore"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
