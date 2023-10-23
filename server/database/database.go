@@ -8,5 +8,6 @@ import (
 
 type ZooWeeperDatabaseRepo interface {
 	Connection() *sql.DB
-	AllGameResults() ([]*models.GameResults, error)
+	InsertMetadata(metadata models.Metadata) error
+	AllMetadata() ([]*models.Metadata, error)
 }
