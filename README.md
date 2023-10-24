@@ -1,10 +1,10 @@
 # ZooWeeper: 50.041 Distributed System Project
-## Running Locally:
+## Running Locally
 Each of the 3 applications have a Dockerfile on its root, running docker compose up would build the image for each application. 
 
-3x Zookeeper Server
-2x Kafka Server (Express)
-1x Kafka React Application
+- 3x Zookeeper Server
+- 2x Kafka Server (Express)
+- 1x Kafka React Application
 
 1. Switch to the root directory and run `docker-compose up -d`
 
