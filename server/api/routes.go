@@ -16,7 +16,8 @@ func (app *Application) Routes() http.Handler {
 
 	// routes
 	mux.Get("/", app.Ping)
-	mux.Get("/gameResults", app.GetGameResults)
+	mux.Get("/metadata", app.GetAllMetadata)
+	mux.Post("/score", app.AddScore)
 
 	return mux
 }
