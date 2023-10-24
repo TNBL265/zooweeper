@@ -1,0 +1,3 @@
+/node_modules
+/kafka-db.sqlite
+/package-lock.json
