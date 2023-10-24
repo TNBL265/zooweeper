@@ -16,3 +16,10 @@ type UpdateScore struct {
 	Attempts   int          `json:"Attempts"`
 	Event      *GameResults `json:"Event"`
 }
+
+type T1 struct {
+	LeaderServer int
+	servers []string
+	Processes for each server
+	...
+}
