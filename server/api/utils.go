@@ -1,9 +1,12 @@
 package zooweeper
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
+	"log"
 	"net/http"
 )
 
@@ -68,4 +71,26 @@ func (app *Application) errorJSON(w http.ResponseWriter, err error, status ...in
 	payload.Message = err.Error()
 
 	return app.writeJSON(w, statusCode, payload)
+}
+
+func (app *Application) makeExternalRequest(w http.ResponseWriter, incomingUrl string, method string, jsonData []byte) *http.Response {
+	client := &http.Client{}
+	url := fmt.Sprintf(incomingUrl)
+
+	req, err := http.NewRequest(method, url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		log.Println("Error creatin request:", err)
+		app.errorJSON(w, err, http.StatusBadRequest)
+	}
+
+	req.Header.Add("Accept", "application/json")
+	req.Header.Add("Content-Type", "application/json")
+
+	res, err := client.Do(req)
+	if err != nil {
+		log.Println("Error sending request:", err)
+		app.errorJSON(w, err, http.StatusBadRequest)
+	}
+
+	return res
 }

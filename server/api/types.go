@@ -1,6 +1,6 @@
 package zooweeper
 
-import zooweeper "github.com/tnbl265/zooweeper/server/database"
+import zooweeper "github.com/tnbl265/zooweeper/database"
 
 type Application struct {
 	Domain string
