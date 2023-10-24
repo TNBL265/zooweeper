@@ -1,4 +1,6 @@
 # ZooWeeper: 50.041 Distributed System Project
+## Running Locally:
+1. Switch to the root directory and run `docker-compose up -d`
 
 ## Structure Overview
 - `client` - Implement client API and connection
