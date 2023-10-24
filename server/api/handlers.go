@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/tnbl265/zooweeper/server/database/models"
+	"github.com/tnbl265/zooweeper/database/models"
 )
 
 const frontendUrl = "http://localhost:9092"

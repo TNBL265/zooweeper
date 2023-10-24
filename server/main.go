@@ -7,8 +7,8 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 
-	api "github.com/tnbl265/zooweeper/server/api"
-	dbrepo "github.com/tnbl265/zooweeper/server/database/dbrepo"
+	api "github.com/tnbl265/zooweeper/api"
+	dbrepo "github.com/tnbl265/zooweeper/database/dbrepo"
 )
 
 const port = 8080
