@@ -6,8 +6,10 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/tnbl265/zooweeper/database/models"
 )
 
@@ -93,6 +95,33 @@ func (app *Application) AddScore(w http.ResponseWriter, r *http.Request) {
 	err = app.writeJSON(w, http.StatusOK, responseObject)
 	if err != nil {
 		app.errorJSON(w, err, http.StatusInternalServerError)
+		return
+	}
+}
+
+func (app *Application) doesScoreExist(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "leaderServer")
+
+	result, err := app.DB.CheckMetadataExist(id)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+
+	err = app.writeJSON(w, http.StatusOK, strconv.FormatBool(result))
+	if err != nil {
+		app.errorJSON(w, err, http.StatusInternalServerError)
+		return
+	}
+
+}
+
+func (app *Application) DeleteScore(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "leaderServer")
+
+	err := app.DB.DeleteMetadata(id)
+	if err != nil {
+		app.errorJSON(w, err)
 		return
 	}
 }

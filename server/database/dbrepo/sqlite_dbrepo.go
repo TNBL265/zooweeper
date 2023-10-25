@@ -64,3 +64,30 @@ func (m *SQLiteDBRepo) InsertMetadata(metadata models.Sello) error {
 
 	return nil
 }
+
+func (m *SQLiteDBRepo) CheckMetadataExist(leaderServer string) (bool, error) {
+
+	sqlStatement := "SELECT COUNT(*) FROM znode WHERE LeaderServer = ?"
+
+	var count int
+	err := m.DB.QueryRow(sqlStatement, leaderServer).Scan(&count)
+	if err != nil {
+		log.Println("Error executing reading row", err)
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (m *SQLiteDBRepo) DeleteMetadata(leaderServer string) error {
+
+	sqlStatement := "DELETE FROM znode WHERE LeaderServer = ?"
+
+	_, err := m.DB.Exec(sqlStatement, leaderServer)
+	if err != nil {
+		log.Println("Error executing delete row", err)
+		return err
+	}
+
+	return nil
+}
