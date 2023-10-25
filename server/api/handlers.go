@@ -31,10 +31,12 @@ func (app *Application) GetAllMetadata(w http.ResponseWriter, r *http.Request) {
 
 func (app *Application) AddScore(w http.ResponseWriter, r *http.Request) {
 	var requestPayload struct {
-		SenderIp   string             `json:"SenderIp"`
-		ReceiverIp string             `json:"ReceiverIp"`
-		Attempts   int                `json:"Attempts"`
-		Event      models.GameResults `json:"Event"`
+		LeaderServer string             `json:"LeaderServer"`
+		Servers      string             `json:"Servers"`
+		SenderIp     string             `json:"SenderIp"`
+		ReceiverIp   string             `json:"ReceiverIp"`
+		Attempts     int                `json:"Attempts"`
+		Event        models.GameResults `json:"Event"`
 	}
 
 	err := app.readJSON(w, r, &requestPayload)
@@ -46,11 +48,17 @@ func (app *Application) AddScore(w http.ResponseWriter, r *http.Request) {
 	timeReceived := time.Now()
 
 	// insert metadata into database
-	metadata := models.Metadata{
-		SenderIp:   requestPayload.SenderIp,
-		ReceiverIp: requestPayload.ReceiverIp,
-		Attempts:   requestPayload.Attempts,
-		Timestamp:  timeReceived,
+	metadata := models.Sello{
+		ServersData: models.ServersData{
+			LeaderServer: requestPayload.LeaderServer,
+			Servers:      requestPayload.Servers,
+		},
+		Metadata: models.Metadata{
+			SenderIp:   requestPayload.SenderIp,
+			ReceiverIp: requestPayload.ReceiverIp,
+			Attempts:   requestPayload.Attempts,
+			Timestamp:  timeReceived,
+		},
 	}
 	err = app.DB.InsertMetadata(metadata)
 	if err != nil {
