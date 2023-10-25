@@ -6,6 +6,7 @@ Each of the 3 applications have a Dockerfile on its root, running docker compose
 - 2x Kafka Server (Express)
 - 1x Kafka React Application
 
+0. Create SQLite3 db: `sqlite3 kafka-db.sqlite < kafka-db.sql`
 1. Switch to the root directory and run `docker-compose up -d`
 
 ## Structure Overview
