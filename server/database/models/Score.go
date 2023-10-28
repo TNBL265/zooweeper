@@ -16,7 +16,18 @@ type Metadata struct {
 	Attempts   int       `json:"Attempts"`
 }
 
+type ServersData struct {
+	LeaderServer string `json:"LeaderServer"`
+	Servers      string `json:"Servers"`
+}
+
+type Sello struct {
+	ServersData
+	Metadata
+}
+
 type Score struct {
+	ServersData
 	Metadata
 	Event GameResults `json:"Event"`
 }
