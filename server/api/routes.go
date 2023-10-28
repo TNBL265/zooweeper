@@ -18,6 +18,8 @@ func (app *Application) Routes() http.Handler {
 	mux.Get("/", app.Ping)
 	mux.Get("/metadata", app.GetAllMetadata)
 	mux.Post("/score", app.AddScore)
+	mux.Post("/scoreExists/{leaderServer}", app.doesScoreExist)
+	mux.Delete("/score/{leaderServer}", app.DeleteScore)
 
 	return mux
 }
