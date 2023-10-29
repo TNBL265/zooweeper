@@ -3,11 +3,8 @@ package zooweeper
 import (
 	"encoding/json"
 	"fmt"
-	"io"
-	"log"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/tnbl265/zooweeper/database/models"
@@ -31,6 +28,44 @@ func (app *Application) GetAllMetadata(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (app *Application) AddScore(w http.ResponseWriter, r *http.Request) {
+	var requestPayload struct {
+		Metadata    models.Metadata    `json:"Metadata"`
+		GameResults models.GameResults `json:"GameResults"`
+	}
+
+	err := app.readJSON(w, r, &requestPayload)
+	if err != nil {
+		app.errorJSON(w, err, http.StatusBadRequest)
+		return
+	}
+
+	metadata := models.Data{
+		Metadata: models.Metadata{
+			SenderIp:   requestPayload.Metadata.SenderIp,
+			ReceiverIp: requestPayload.Metadata.ReceiverIp,
+			Attempts:   requestPayload.Metadata.Attempts,
+			Timestamp:  requestPayload.Metadata.Timestamp,
+		},
+		GameResults: models.GameResults{
+			Minute: requestPayload.GameResults.Minute,
+			Player: requestPayload.GameResults.Player,
+			Club:   requestPayload.GameResults.Club,
+			Score:  requestPayload.GameResults.Score,
+		},
+	}
+
+	// get servers from 'servers' header in table
+	ports, _ := app.DB.GetServers()
+	// perform POST request to all servers mentioned.
+	jsonData, err := json.Marshal(metadata.GameResults)
+	for _, port := range ports {
+		url := fmt.Sprintf("http://localhost:%s/updateScore", port)
+		_ = app.makeExternalRequest(w, url, "POST", jsonData)
+	}
+}
+
+/*
 func (app *Application) AddScore(w http.ResponseWriter, r *http.Request) {
 	var requestPayload struct {
 		LeaderServer string             `json:"LeaderServer"`
@@ -98,6 +133,7 @@ func (app *Application) AddScore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
+*/
 
 func (app *Application) doesScoreExist(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "leaderServer")

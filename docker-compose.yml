@@ -25,12 +25,12 @@ services:
   kafka-1:
     build: ./kafka-server
     ports:
-      - "9093:9093"
+      - "9093:9092"
 
   kafka-2:
     build: ./kafka-server
     ports:
-      - "9094:9094"
+      - "9094:9092"
 
   # web servers
   web:
