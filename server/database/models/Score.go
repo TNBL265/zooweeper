@@ -31,3 +31,8 @@ type Score struct {
 	Metadata
 	Event GameResults `json:"Event"`
 }
+
+type Data struct {
+	Metadata
+	GameResults
+}

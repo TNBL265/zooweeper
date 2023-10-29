@@ -3,6 +3,7 @@ package zooweeper
 import (
 	"database/sql"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/tnbl265/zooweeper/database/models"
@@ -90,4 +91,25 @@ func (m *SQLiteDBRepo) DeleteMetadata(leaderServer string) error {
 	}
 
 	return nil
+}
+
+func (m *SQLiteDBRepo) GetServers() ([]string, error) {
+	sqlStatement := "SELECT Servers FROM znode WHERE NodeId = ?"
+	rows, err := m.DB.Query(sqlStatement, 1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var serversStr string
+	if rows.Next() {
+		err := rows.Scan(&serversStr)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	servers := strings.Split(serversStr, ", ")
+
+	return servers, nil
 }

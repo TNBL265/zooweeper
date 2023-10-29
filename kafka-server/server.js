@@ -4,6 +4,7 @@ const sqlite3 = require("sqlite3").verbose();
 const app = express();
 const port = 9092;
 const cors = require("cors");
+const request = require("request-promise");
 
 app.use(cors());
 app.use(express.json());
@@ -25,6 +26,43 @@ let db = new sqlite3.Database("kafka-db.sqlite", (err) => {
 //   { minutes: 95, player: "Mathys Tel", club: "FCB", score: "2-4" },
 //   { minutes: 95, player: "Casemiro", club: "MNU", score: "3-4" },
 // ];
+
+app.post("/addScore", (req, res) => {
+  const currentTimestamp = new Date().toISOString(); // Get the current time in RFC3339 format
+
+  incomingScore = {
+    Metadata: {
+      SenderIp: req.body.metadata.SenderIp,
+      ReceiverIp: req.body.metadata.ReceiverIp,
+      Timestamp: currentTimestamp,
+      Attempts: req.body.metadata.Attempts,
+    },
+    GameResults: {
+      Min: req.body.gameResults.Min,
+      Player: req.body.gameResults.Player,
+      Club: req.body.gameResults.Club,
+      Score: req.body.gameResults.Score,
+    },
+  };
+
+  const options = {
+    method: "POST",
+    uri: "http://localhost:8080/score",
+    body: incomingScore,
+    json: true,
+    headers: {
+      "Content-Type": "application/json",
+    },
+  };
+
+  request(options, function (error, response, body) {
+    if (!error) {
+      res.sendStatus(200);
+    } else {
+      console.log(error);
+    }
+  });
+});
 
 // Define a route to handle GET requests
 app.get("/data", (req, res) => {
