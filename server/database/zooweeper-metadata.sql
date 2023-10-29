@@ -5,6 +5,7 @@ CREATE TABLE znode (
   NodeId INTEGER PRIMARY KEY AUTOINCREMENT,
   LeaderServer TEXT,
   Servers TEXT,
+  NodeIp TEXT,
   SenderIp TEXT,
   ReceiverIp TEXT,
   Timestamp DATETIME,
@@ -14,9 +15,9 @@ CREATE TABLE znode (
 );
 
 
-INSERT INTO znode (LeaderServer, Servers, SenderIp, ReceiverIp, Timestamp, Attempts, Version, ParentId) VALUES ('192.168.8080', '192.168.8081, 192.168.8082', '-', '-', CURRENT_TIMESTAMP, 1, 0, 0);
-INSERT INTO znode (LeaderServer, Servers, SenderIp, ReceiverIp, Timestamp, Attempts, Version, ParentId) VALUES ('-', '-', '192.168.1.8', '192.168.1.9', CURRENT_TIMESTAMP, 2, 0, 2);
-INSERT INTO znode (LeaderServer, Servers, SenderIp, ReceiverIp, Timestamp, Attempts, Version, ParentId) VALUES ('-', '-', '192.168.1.10', '192.168.1.11', CURRENT_TIMESTAMP, 3, 0, 3);
+INSERT INTO znode (LeaderServer, Servers, NodeIp, SenderIp, ReceiverIp, Timestamp, Attempts, Version, ParentId) VALUES ('9092', '9092 9093, 9094','8080', '-', '-', CURRENT_TIMESTAMP, 1, 0, 0);
+INSERT INTO znode (LeaderServer, Servers, NodeIp, SenderIp, ReceiverIp, Timestamp, Attempts, Version, ParentId) VALUES ('-', '-', '8080', 'postman', '9092', CURRENT_TIMESTAMP, 2, 0, 2);
+INSERT INTO znode (LeaderServer, Servers, NodeIp, SenderIp, ReceiverIp, Timestamp, Attempts, Version, ParentId) VALUES ('-', '-', '8080', 'postman', '9092', CURRENT_TIMESTAMP, 3, 0, 3);
 
 COMMIT;
 
