@@ -8,6 +8,7 @@ import (
 
 type ZooWeeperDatabaseRepo interface {
 	Connection() *sql.DB
+	GetServers() ([]string, error)
 	InsertMetadata(metadata models.Sello) error
 	AllMetadata() ([]*models.Sello, error)
 	DeleteMetadata(LeaderServer string) error
