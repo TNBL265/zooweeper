@@ -1,4 +1,11 @@
 # ZooWeeper: 50.041 Distributed System Project
+
+## Technical Diagrams
+### High-Level Architecture
+![image](https://github.com/TNBL265/zooweeper/assets/84057800/a1ca45c3-08ba-4fa9-ae25-aa616a9d0f40)
+### Implementation Focus
+![image](https://github.com/TNBL265/zooweeper/assets/84057800/f4c8fc50-a734-4d08-89b4-28e20041991d)
+
 ## Running Locally
 Each of the 3 applications have a Dockerfile on its root, running docker compose up would build the image for each application. 
 
@@ -6,8 +13,8 @@ Each of the 3 applications have a Dockerfile on its root, running docker compose
 - 2x Kafka Server (Express)
 - 1x Kafka React Application
 
-0. Create SQLite3 db: `sqlite3 kafka-db.sqlite < kafka-db.sql`
-1. Switch to the root directory and run `docker-compose up -d`
+1. Create SQLite3 db: `sqlite3 kafka-db.sqlite < kafka-db.sql`
+2. Switch to the root directory and run `docker-compose up -d`
 
 ## Structure Overview
 - `client` - Implement client API and connection
