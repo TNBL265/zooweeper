@@ -44,10 +44,10 @@ func (m *SQLiteDBRepo) AllMetadata() ([]*models.Sello, error) {
 }
 
 // Updata db via sth query.
-func (m *SQLiteDBRepo) InsertMetadata(metadata models.Sello) error {
+func (m *SQLiteDBRepo) InsertMetadata(metadata models.Metadata) error {
 	sqlStatement := `
-	INSERT INTO znode (LeaderServer, Servers, SenderIp, ReceiverIp, Timestamp, Attempts)
-	VALUES (?, ?, ?, ?, ?, ?)
+	INSERT INTO znode (LeaderServer, Servers, NodeIp, SenderIp, ReceiverIp, Timestamp, Version, Attempts)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 	row, err := m.DB.Prepare(sqlStatement)
@@ -57,7 +57,7 @@ func (m *SQLiteDBRepo) InsertMetadata(metadata models.Sello) error {
 	}
 	defer row.Close()
 
-	_, err = row.Exec(metadata.LeaderServer, metadata.Servers, metadata.SenderIp, metadata.ReceiverIp, metadata.Timestamp, metadata.Attempts)
+	_, err = row.Exec("-", "-", "8080", metadata.SenderIp, metadata.ReceiverIp, metadata.Timestamp, 0, metadata.Attempts)
 	if err != nil {
 		log.Println("Error executing insert row", err)
 		return err

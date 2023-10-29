@@ -15,7 +15,7 @@ CREATE TABLE znode (
 );
 
 
-INSERT INTO znode (LeaderServer, Servers, NodeIp, SenderIp, ReceiverIp, Timestamp, Attempts, Version, ParentId) VALUES ('9092', '9092 9093, 9094','8080', '-', '-', CURRENT_TIMESTAMP, 1, 0, 0);
+INSERT INTO znode (LeaderServer, Servers, NodeIp, SenderIp, ReceiverIp, Timestamp, Attempts, Version, ParentId) VALUES ('9092', '9092, 9093, 9094','8080', '-', '-', CURRENT_TIMESTAMP, 1, 0, 0);
 INSERT INTO znode (LeaderServer, Servers, NodeIp, SenderIp, ReceiverIp, Timestamp, Attempts, Version, ParentId) VALUES ('-', '-', '8080', 'postman', '9092', CURRENT_TIMESTAMP, 2, 0, 2);
 INSERT INTO znode (LeaderServer, Servers, NodeIp, SenderIp, ReceiverIp, Timestamp, Attempts, Version, ParentId) VALUES ('-', '-', '8080', 'postman', '9092', CURRENT_TIMESTAMP, 3, 0, 3);
 

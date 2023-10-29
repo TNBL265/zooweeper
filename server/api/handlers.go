@@ -55,6 +55,12 @@ func (app *Application) AddScore(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
+	err = app.DB.InsertMetadata(metadata.Metadata)
+	if err != nil {
+		app.errorJSON(w, err, http.StatusBadRequest)
+		return
+	}
+
 	// get servers from 'servers' header in table
 	ports, _ := app.DB.GetServers()
 	// perform POST request to all servers mentioned.
