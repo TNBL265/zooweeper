@@ -2,7 +2,7 @@
 
 ## Technical Diagrams
 ### High-Level Architecture
-![image](https://github.com/TNBL265/zooweeper/assets/84057800/a1ca45c3-08ba-4fa9-ae25-aa616a9d0f40)
+ ![image](https://github.com/TNBL265/zooweeper/assets/84057800/c3221be1-5542-44e2-a650-e901587daf9b)
 ### Implementation Focus (Checkpoint 1)
 ![image](https://github.com/TNBL265/zooweeper/assets/84057800/f4c8fc50-a734-4d08-89b4-28e20041991d)
 
