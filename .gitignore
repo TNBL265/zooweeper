@@ -22,5 +22,6 @@ go.work
 
 # Others
 .idea/
+*.db
 
 /frontend/node_modules

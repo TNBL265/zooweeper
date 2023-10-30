@@ -8,6 +8,11 @@
 
 ## Local development
 ### Zookeeper Server
+- Create database:
+```shell
+cd zooweeper/server/database
+sqlite3 zooweeper-metadata.db < zooweeper-metadata.sql
+```
 - Run: 
 ```shell
 cd zooweeper/server
@@ -16,6 +21,11 @@ go run main.go
 ```
 - Output: `pong` on `localhost:8080`
 ### Kafka Server (Express)
+- Create database:
+```shell
+cd zooweeper/kafka-server
+sqlite3 kafka-events.db < kafka-events.sql
+```
 - Run:
 ```shell
 cd zooweeper/kafka-server
