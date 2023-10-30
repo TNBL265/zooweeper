@@ -57,6 +57,7 @@ func (app *Application) AddScore(w http.ResponseWriter, r *http.Request) {
 
 	// get servers from 'servers' header in table
 	ports, _ := app.DB.GetServers()
+	ports = []string{"9092"}
 	// perform POST request to all servers mentioned.
 	jsonData, err := json.Marshal(metadata.GameResults)
 	for _, port := range ports {
@@ -66,7 +67,7 @@ func (app *Application) AddScore(w http.ResponseWriter, r *http.Request) {
 
 	// how to get all znode servers?
 	jsonData, err = json.Marshal(metadata.Metadata)
-	zkPorts := []int{8080, 8081, 8082}
+	zkPorts := []int{8080}
 	for _, zkPorts := range zkPorts {
 		url := fmt.Sprintf("http://localhost:%s/metadata", strconv.Itoa(zkPorts))
 		_ = app.makeExternalRequest(w, url, "POST", jsonData)
@@ -76,19 +77,21 @@ func (app *Application) AddScore(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *Application) UpdateMetaData(w http.ResponseWriter, r *http.Request) {
-	// BUG: receiving json data mismatch error
-	var requestPayload struct {
-		Metadata models.Metadata `json:"Metadata"`
-	}
+	var requestPayload models.Metadata
 
+	err := app.readJSON(w, r, &requestPayload)
+	if err != nil {
+		app.errorJSON(w, err, http.StatusBadRequest)
+		return
+	}
 	metadata := models.Metadata{
-		SenderIp:   requestPayload.Metadata.SenderIp,
-		ReceiverIp: requestPayload.Metadata.ReceiverIp,
-		Attempts:   requestPayload.Metadata.Attempts,
-		Timestamp:  requestPayload.Metadata.Timestamp,
+		SenderIp:   requestPayload.SenderIp,
+		ReceiverIp: requestPayload.ReceiverIp,
+		Attempts:   requestPayload.Attempts,
+		Timestamp:  requestPayload.Timestamp,
 	}
 
-	err := app.DB.InsertMetadata(metadata)
+	err = app.DB.InsertMetadata(metadata)
 	if err != nil {
 		app.errorJSON(w, err, http.StatusBadRequest)
 		return
