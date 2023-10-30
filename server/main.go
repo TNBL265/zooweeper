@@ -35,27 +35,27 @@ func main() {
 	fmt.Println("ZooWeeper Server started on port:", port)
 
 	// Set Application Config
-	var app requestProcessor.Application
+	var rp requestProcessor.RequestProcessor
 
 	// Connect to the Database
 	log.Println("Connecting to", dbPath)
-	db, err := app.OpenDB(dbPath)
+	db, err := rp.Zab.OpenDB(dbPath)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	app.DB = &ZNodeHandlers.ZTree{DB: db}
+	rp.Zab.ZTree = &ZNodeHandlers.ZTree{DB: db}
 	//close when it is done
 	defer func(connection *sql.DB) {
 		err := connection.Close()
 		if err != nil {
 			log.Fatal(err)
 		}
-	}(app.DB.Connection())
+	}(rp.Zab.ZTree.Connection())
 
 	// Start a Web Server
-	log.Println("Starting application on port", port)
-	err = http.ListenAndServe(fmt.Sprintf(":"+port), app.Routes())
+	log.Println("Starting rplication on port", port)
+	err = http.ListenAndServe(fmt.Sprintf(":"+port), rp.Routes())
 	if err != nil {
 		log.Fatal(err)
 	}

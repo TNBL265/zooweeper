@@ -12,7 +12,7 @@ type Metadata struct {
 }
 
 type GameResults struct {
-	Minute int    `json:"Min"`
+	Minute int    `json:"Minute"`
 	Player string `json:"Player"`
 	Club   string `json:"Club"`
 	Score  string `json:"Score"`
