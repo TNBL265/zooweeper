@@ -11,36 +11,36 @@
 - Create database:
 ```shell
 cd zooweeper/server/database
-sqlite3 zooweeper-metadata.db < zooweeper-metadata.sql
+sqlite3 zooweeper-metadata-0.db < zooweeper-metadata.sql
 ```
 - Run: 
 ```shell
 cd zooweeper/server
 go mod tidy 
-go run main.go
+PORT=8080 go run main.go
 ```
 - Output: `pong` on `localhost:8080`
 ### Kafka Server (Express)
 - Create database:
 ```shell
 cd zooweeper/kafka-server
-sqlite3 kafka-events.db < kafka-events.sql
+sqlite3 kafka-events-0.db < kafka-events.sql
 ```
 - Run:
 ```shell
 cd zooweeper/kafka-server
 npm install
-npm start
+PORT=9090 npm start
 ```
-- Output: `Events` json on `localhost:9092`
+- Output: `Events` json on `localhost:9090`
 ### Kafka Client Application (React)
 - Run: 
 ```shell
 cd zooweeper/kafka-react-app
 npm install
-npm start
+PORT=3000 npm start
 ```
-- Output: formatted `Events` json on `localhost:9092`  (when Kafka Server is running)
+- Output: formatted `Events` json on `localhost:3000`  (when Kafka Server is running)
 
 ### Distributed System Demo
 - Overview: The above applications would be dockerized:
