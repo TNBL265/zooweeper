@@ -2,19 +2,35 @@ const express = require("express");
 const sqlite3 = require("sqlite3").verbose();
 
 const app = express();
-const port = 9092;
-const cors = require("cors");
 const request = require("request-promise");
+const cors = require("cors");
 
 app.use(cors());
 app.use(express.json());
 
+let port = process.env.PORT || 9090;
+let dbPath;
+switch (port) {
+  case '9090':
+    dbPath = 'kafka-events-0.db';
+    break;
+  case '9091':
+    dbPath = 'kafka-events-1.db';
+    break;
+  case '9092':
+    dbPath = 'kafka-events-2.db';
+    break;
+  default:
+    console.error('Unsupported port:', port);
+    process.exit(1);
+}
+
 // open database in memory
-let db = new sqlite3.Database("kafka-events.db", (err) => {
+let db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
     return console.error(err.message);
   }
-  console.log("Connected to the in-memory SQlite database.");
+  console.log(`Connected to the ${dbPath} SQLite database.`);
 });
 
 // const dataArray = [
