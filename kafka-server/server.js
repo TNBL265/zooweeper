@@ -10,7 +10,7 @@ app.use(cors());
 app.use(express.json());
 
 // open database in memory
-let db = new sqlite3.Database("kafka-db.sqlite", (err) => {
+let db = new sqlite3.Database("kafka-events.db", (err) => {
   if (err) {
     return console.error(err.message);
   }

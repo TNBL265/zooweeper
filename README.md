@@ -2,56 +2,45 @@
 
 ## Technical Diagrams
 ### High-Level Architecture
- ![image](https://github.com/TNBL265/zooweeper/assets/84057800/c3221be1-5542-44e2-a650-e901587daf9b)
+ ![](assets/system_architecture.png)
 ### Implementation Focus (Checkpoint 1)
-![image](https://github.com/TNBL265/zooweeper/assets/84057800/f4c8fc50-a734-4d08-89b4-28e20041991d)
+![](assets/request_processor_flow.png)
 
-## Running Locally
-Each of the 3 applications have a Dockerfile on its root, running docker compose up would build the image for each application. 
+## Local development
+### Zookeeper Server
+- Run: 
+```shell
+cd zooweeper/server
+go mod tidy 
+go run main.go
+```
+- Output: `pong` on `localhost:8080`
+### Kafka Server (Express)
+- Run:
+```shell
+cd zooweeper/kafka-server
+npm install
+npm start
+```
+- Output: `Events` json on `localhost:9092`
+### Kafka Client Application (React)
+- Run: 
+```shell
+cd zooweeper/kafka-react-app
+npm install
+npm start
+```
+- Output: formatted `Events` json on `localhost:9092`  (when Kafka Server is running)
 
-- 3x Zookeeper Server
-- 2x Kafka Server (Express)
-- 1x Kafka React Application
-
-1. Create SQLite3 db: `sqlite3 kafka-db.sqlite < kafka-db.sql`
-2. Switch to the root directory and run `docker-compose up -d`
-
-## Structure Overview
-- `client` - Implement client API and connection
-- `server` - Implement main server features:
-  - `core`: server connection, session management, watcher and request processors flow for leader and followers
-  - `database`: main data structure
-  - `request_processors`: ensure linearizable writes and FIFO client order
-  - `zab`: fault tolerance, leader election
-```bash
-zooweeper/
-│
-├── client/
-│   ├── client_connection.go
-│   ├── zw.go
-│
-├── server/
-│   ├── core/
-│   │   ├── follower_zw_server.go
-│   │   ├── leader_zw_server.go
-│   │   ├── server_connection.go
-│   │   ├── session_tracker.go
-│   │   ├── watcher.go
-│   │   └── zw_server.go
-│   ├── database/
-│   │   ├── znode.go
-│   │   ├── ztree.go
-│   ├── request_processors/
-│   │   ├── common_processors.go
-│   │   ├── follower_processors.go
-│   │   ├── leader_processors.go
-│   │   ├── request_processor.go
-│   ├── zab/
-│   │   ├── follower.go
-│   │   ├── follower_handler.go
-│   │   ├── leader.go
-│   │   ├── leader_election.go
-│   │   ├── quorum.go
+### Distributed System Demo
+- Overview: The above applications would be dockerized:
+  - 3x Zookeeper Server
+  - 2x Kafka Server (Express)
+  - 1x Kafka Client Application (React)
+- Run:
+```shell
+cd zooweeper
+docker-compose up
 ```
 
 ## References:

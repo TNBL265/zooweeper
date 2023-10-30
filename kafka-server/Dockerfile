@@ -3,7 +3,7 @@ FROM node:18
 WORKDIR /kafka
 
 COPY package.json .
-COPY /kafka-db.sqlite .
+COPY /kafka-events.db .
 
 RUN npm install
 

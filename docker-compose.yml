@@ -1,39 +1,47 @@
 version: "3.9"
 
 services:
-  # zookeeper servers
-  zookeeper:
-    build: ./server
+  zooweeper-0:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    image: zooweeper_server:latest
     ports:
       - "8080:8080"
 
-  zookeeper-1:
-    build: ./server
+  zooweeper-1:
+    image: zooweeper_server:latest
     ports:
       - "8081:8080"
 
-  zookeeper-2:
-    build: ./server
+  zooweeper-2:
+    image: zooweeper_server:latest
     ports:
       - "8082:8080"
+
   # kafka servers
-  kafka:
-    build: ./kafka-server
+  kafka-server-0:
+    build:
+      context: ./kafka-server
+      dockerfile: Dockerfile
+    image: kafka_server:latest
     ports:
       - "9092:9092"
 
-  kafka-1:
-    build: ./kafka-server
+  kafka-server-1:
+    image: kafka_server:latest
     ports:
       - "9093:9092"
 
-  kafka-2:
-    build: ./kafka-server
+  kafka-server-2:
+    image: kafka_server:latest
     ports:
       - "9094:9092"
 
-  # web servers
-  web:
-    build: ./kafka-react-app
+  kafka-react-app:
+    build:
+      context: ./kafka-react-app
+      dockerfile: Dockerfile
+    image: kafka_react_app:latest
     ports:
       - "3000:3000"
