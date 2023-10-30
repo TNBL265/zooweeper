@@ -10,7 +10,7 @@ type ZooWeeperDatabaseRepo interface {
 	Connection() *sql.DB
 	GetServers() ([]string, error)
 	InsertMetadata(metadata models.Metadata) error
-	AllMetadata() ([]*models.Sello, error)
+	AllMetadata() ([]*models.Metadata, error)
 	DeleteMetadata(LeaderServer string) error
 	CheckMetadataExist(LeaderServer string) (bool, error)
 }

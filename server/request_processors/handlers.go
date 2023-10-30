@@ -10,8 +10,6 @@ import (
 	"github.com/tnbl265/zooweeper/database/models"
 )
 
-const frontendUrl = "http://localhost:9092"
-
 func (app *Application) Ping(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "pong")
 }
@@ -57,7 +55,7 @@ func (app *Application) AddScore(w http.ResponseWriter, r *http.Request) {
 
 	// get servers from 'servers' header in table
 	ports, _ := app.DB.GetServers()
-	ports = []string{"9092"}
+	ports = []string{"9090"}
 	// perform POST request to all servers mentioned.
 	jsonData, err := json.Marshal(metadata.GameResults)
 	for _, port := range ports {
@@ -65,7 +63,6 @@ func (app *Application) AddScore(w http.ResponseWriter, r *http.Request) {
 		_ = app.makeExternalRequest(w, url, "POST", jsonData)
 	}
 
-	// how to get all znode servers?
 	jsonData, err = json.Marshal(metadata.Metadata)
 	zkPorts := []int{8080}
 	for _, zkPorts := range zkPorts {
