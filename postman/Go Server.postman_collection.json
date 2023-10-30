@@ -1,0 +1,65 @@
+{
+	"info": {
+		"_postman_id": "aba19759-f469-47bc-b191-35ba91cb5d1c",
+		"name": "Go Server",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
+		"_exporter_id": "30669795",
+		"_collection_link": "https://dsc-zooweeper.postman.co/workspace/Team-Workspace~32c9bc3a-2316-4149-8636-3eb3047b2b96/collection/30669795-aba19759-f469-47bc-b191-35ba91cb5d1c?action=share&source=collection_link&creator=30669795"
+	},
+	"item": [
+		{
+			"name": "Ping",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": "{{goBaseUrl}}/"
+			},
+			"response": []
+		},
+		{
+			"name": "All Metadata",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": "{{goBaseUrl}}/metadata"
+			},
+			"response": []
+		},
+		{
+			"name": "Score",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"LeaderServer\":\"testleader1\",\r\n    \"Servers\":\"testservers1\",\r\n    \"SenderIp\":\"testsender1\",\r\n    \"ReceiverIp\":\"testreceiver1\",\r\n    \"Attempts\":1,\r\n    \"Event\": {\r\n        \"Min\": 2,\r\n        \"Player\":\"testplayer\",\r\n        \"Club\":\"testclub\",\r\n        \"Score\":\"testscore\" \r\n    }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "{{goBaseUrl}}/score"
+			},
+			"response": []
+		},
+		{
+			"name": "Score/{id}",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": "{{baseurl}}/score/testleader1"
+			},
+			"response": []
+		},
+		{
+			"name": "checkScoreExist/{id}",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": "{{goBaseUrl}}/scoreExists/192.168.1.1"
+			},
+			"response": []
+		}
+	]
+}
