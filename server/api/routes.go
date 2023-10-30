@@ -17,6 +17,7 @@ func (app *Application) Routes() http.Handler {
 	// routes
 	mux.Get("/", app.Ping)
 	mux.Post("/score", app.AddScore)
+	mux.Post("/metadata", app.UpdateMetaData)
 
 	mux.Get("/metadata", app.GetAllMetadata)
 	mux.Post("/scoreExists/{leaderServer}", app.doesScoreExist)
