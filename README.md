@@ -7,6 +7,12 @@
 ![](assets/request_processor_flow.png)
 
 ## Local development
+### Postman
+- Start a new Postman workspace: https://web.postman.co/workspaces
+- Import **Collections** from [./postman](./postman)
+- Set **Environments**:
+  - `goBaseUrl=8080`
+  - `expressBaseUrl=9090`
 ### Zookeeper Server
 - Create database:
 ```shell
