@@ -33,17 +33,8 @@ let db = new sqlite3.Database(dbPath, (err) => {
   console.log(`Connected to the ${dbPath} SQLite database.`);
 });
 
-// const dataArray = [
-//   { minutes: 28, player: "Leroy Sane", club: "FCB", score: "0-1" },
-//   { minutes: 49, player: "Serge Gnabry", club: "FCB", score: "0-2" },
-//   { minutes: 53, player: "Rasmus Hojlund", club: "MNU", score: "1-2" },
-//   { minutes: 88, player: "Harry Kane", club: "FCB", score: "1-3" },
-//   { minutes: 92, player: "Casemiro", club: "MNU", score: "2-4" },
-//   { minutes: 95, player: "Mathys Tel", club: "FCB", score: "2-4" },
-//   { minutes: 95, player: "Casemiro", club: "MNU", score: "3-4" },
-// ];
-
 app.post("/addScore", (req, res) => {
+  console.log("Adding Score", req.body)
   const currentTimestamp = new Date().toISOString(); // Get the current time in RFC3339 format
 
   incomingScore = {
@@ -54,7 +45,7 @@ app.post("/addScore", (req, res) => {
       Attempts: req.body.metadata.Attempts,
     },
     GameResults: {
-      Min: req.body.gameResults.Min,
+      Minute: req.body.gameResults.Minute,
       Player: req.body.gameResults.Player,
       Club: req.body.gameResults.Club,
       Score: req.body.gameResults.Score,
@@ -116,9 +107,10 @@ app.get("/", (req, res) => {
 
 app.post("/updateScore", (req, res) => {
   reqBody = req.body;
+  console.log("Updating Score", req.body)
   try {
-    db.run("INSERT INTO events (Min, Player, Club, Score) VALUES (@minute, @player, @club, @score)", {
-      "@minute": reqBody.Min,
+    db.run("INSERT INTO events (Minute, Player, Club, Score) VALUES (@minute, @player, @club, @score)", {
+      "@minute": reqBody.Minute,
       "@player": reqBody.Player,
       "@club": reqBody.Club,
       "@score": reqBody.Score,
