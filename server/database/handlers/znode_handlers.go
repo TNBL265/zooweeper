@@ -1,4 +1,4 @@
-package zooweeper
+package handlers
 
 import (
 	"database/sql"
@@ -9,18 +9,18 @@ import (
 	"github.com/tnbl265/zooweeper/database/models"
 )
 
-type SQLiteDBRepo struct {
+type ZTree struct {
 	DB *sql.DB
 }
 
 const dbTimeout = time.Second * 3
 
-func (m *SQLiteDBRepo) Connection() *sql.DB {
-	return m.DB
+func (zt *ZTree) Connection() *sql.DB {
+	return zt.DB
 }
 
-func (m *SQLiteDBRepo) AllMetadata() ([]*models.Sello, error) {
-	rows, err := m.DB.Query("SELECT LeaderServer, Servers,  SenderIp, ReceiverIp, Timestamp, Attempts FROM znode")
+func (zt *ZTree) AllMetadata() ([]*models.Metadata, error) {
+	rows, err := zt.DB.Query("SELECT LeaderServer, Servers,  SenderIp, ReceiverIp, Timestamp, Attempts FROM ZNode")
 	if err != nil {
 		log.Println("Error querying the database:", err)
 		return nil, err
@@ -28,10 +28,10 @@ func (m *SQLiteDBRepo) AllMetadata() ([]*models.Sello, error) {
 	defer rows.Close()
 
 	// collate all rows into one slice
-	var results []*models.Sello
+	var results []*models.Metadata
 
 	for rows.Next() {
-		var data models.Sello
+		var data models.Metadata
 		err := rows.Scan(&data.LeaderServer, &data.Servers, &data.SenderIp, &data.ReceiverIp, &data.Timestamp, &data.Attempts)
 		if err != nil {
 			log.Println("Error scanning data", err)
@@ -43,14 +43,13 @@ func (m *SQLiteDBRepo) AllMetadata() ([]*models.Sello, error) {
 	return results, nil
 }
 
-// Updata db via sth query.
-func (m *SQLiteDBRepo) InsertMetadata(metadata models.Metadata) error {
+func (zt *ZTree) InsertMetadata(metadata models.Metadata) error {
 	sqlStatement := `
-	INSERT INTO znode (LeaderServer, Servers, NodeIp, SenderIp, ReceiverIp, Timestamp, Version, Attempts)
+	INSERT INTO ZNode (LeaderServer, Servers, NodeIp, SenderIp, ReceiverIp, Timestamp, Version, Attempts)
 	VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 `
 
-	row, err := m.DB.Prepare(sqlStatement)
+	row, err := zt.DB.Prepare(sqlStatement)
 	if err != nil {
 		log.Println("Error preparing row", err)
 		return err
@@ -66,12 +65,12 @@ func (m *SQLiteDBRepo) InsertMetadata(metadata models.Metadata) error {
 	return nil
 }
 
-func (m *SQLiteDBRepo) CheckMetadataExist(leaderServer string) (bool, error) {
+func (zt *ZTree) CheckMetadataExist(leaderServer string) (bool, error) {
 
-	sqlStatement := "SELECT COUNT(*) FROM znode WHERE LeaderServer = ?"
+	sqlStatement := "SELECT COUNT(*) FROM ZNode WHERE LeaderServer = ?"
 
 	var count int
-	err := m.DB.QueryRow(sqlStatement, leaderServer).Scan(&count)
+	err := zt.DB.QueryRow(sqlStatement, leaderServer).Scan(&count)
 	if err != nil {
 		log.Println("Error executing reading row", err)
 		return false, err
@@ -80,11 +79,11 @@ func (m *SQLiteDBRepo) CheckMetadataExist(leaderServer string) (bool, error) {
 	return true, nil
 }
 
-func (m *SQLiteDBRepo) DeleteMetadata(leaderServer string) error {
+func (zt *ZTree) DeleteMetadata(leaderServer string) error {
 
-	sqlStatement := "DELETE FROM znode WHERE LeaderServer = ?"
+	sqlStatement := "DELETE FROM ZNode WHERE LeaderServer = ?"
 
-	_, err := m.DB.Exec(sqlStatement, leaderServer)
+	_, err := zt.DB.Exec(sqlStatement, leaderServer)
 	if err != nil {
 		log.Println("Error executing delete row", err)
 		return err
@@ -93,9 +92,9 @@ func (m *SQLiteDBRepo) DeleteMetadata(leaderServer string) error {
 	return nil
 }
 
-func (m *SQLiteDBRepo) GetServers() ([]string, error) {
-	sqlStatement := "SELECT Servers FROM znode WHERE NodeId = ?"
-	rows, err := m.DB.Query(sqlStatement, 1)
+func (zt *ZTree) GetServers() ([]string, error) {
+	sqlStatement := "SELECT Servers FROM ZNode WHERE NodeId = ?"
+	rows, err := zt.DB.Query(sqlStatement, 1)
 	if err != nil {
 		return nil, err
 	}

@@ -1,14 +1,15 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	_ "github.com/mattn/go-sqlite3"
 	"log"
 	"net/http"
 	"os"
 
-	api "github.com/tnbl265/zooweeper/api"
-	dbrepo "github.com/tnbl265/zooweeper/database/dbrepo"
+	ZNodeHandlers "github.com/tnbl265/zooweeper/database/handlers"
+	requestProcessor "github.com/tnbl265/zooweeper/request_processors"
 )
 
 func main() {
@@ -34,7 +35,7 @@ func main() {
 	fmt.Println("ZooWeeper Server started on port:", port)
 
 	// Set Application Config
-	var app api.Application
+	var app requestProcessor.Application
 
 	// Connect to the Database
 	log.Println("Connecting to", dbPath)
@@ -43,9 +44,14 @@ func main() {
 		log.Fatal(err)
 	}
 
-	app.DB = &dbrepo.SQLiteDBRepo{DB: db}
+	app.DB = &ZNodeHandlers.ZTree{DB: db}
 	//close when it is done
-	defer app.DB.Connection().Close()
+	defer func(connection *sql.DB) {
+		err := connection.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}(app.DB.Connection())
 
 	// Start a Web Server
 	log.Println("Starting application on port", port)
