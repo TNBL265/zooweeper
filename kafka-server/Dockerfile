@@ -11,4 +11,4 @@ COPY . .
 
 EXPOSE 9092
 
-CMD ["node", "server.js"]
+CMD ["npm", "start"]
