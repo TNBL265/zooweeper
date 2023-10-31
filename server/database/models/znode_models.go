@@ -1,14 +1,17 @@
 package models
 
-import "time"
-
 type Metadata struct {
-	LeaderServer string    `json:"LeaderServer"`
-	Servers      string    `json:"Servers"`
-	SenderIp     string    `json:"SenderIp"`
-	ReceiverIp   string    `json:"ReceiverIp"`
-	Timestamp    time.Time `json:"Timestamp"`
-	Attempts     int       `json:"Attempts"`
+	NodeId     string `json:"NodeId"`
+	NodeIp     string `json:"NodeIp"`
+	Leader     string `json:"Leader"`
+	Servers    string `json:"Servers"`
+	Timestamp  string `json:"Timestamp"`
+	Attempts   int    `json:"Attempts"`
+	Version    int    `json:"Version"`
+	ParentId   int    `json:"ParentId"`
+	Clients    string `json:"Clients"`
+	SenderIp   string `json:"SenderIp"`
+	ReceiverIp string `json:"ReceiverIp"`
 }
 
 type GameResults struct {

@@ -14,11 +14,6 @@
   - `goBaseUrl=8080`
   - `expressBaseUrl=9090`
 ### Zookeeper Server
-- Create database:
-```shell
-cd zooweeper/server/database
-sqlite3 zooweeper-metadata-0.db < zooweeper-metadata.sql
-```
 - Run: 
 ```shell
 cd zooweeper/server

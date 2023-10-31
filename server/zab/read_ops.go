@@ -22,7 +22,7 @@ func (ro *ReadOps) GetAllMetadata(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ro *ReadOps) DoesScoreExist(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "leaderServer")
+	id := chi.URLParam(r, "leader")
 
 	result, err := ro.ab.ZTree.CheckMetadataExist(id)
 	if err != nil {
