@@ -10,7 +10,6 @@ import (
 )
 
 // Self-reference to parent - ref: https://stackoverflow.com/questions/27918208/go-get-parent-struct
-
 type AtomicBroadcast struct {
 	Read  ReadOps
 	Write WriteOps
@@ -29,7 +28,13 @@ func NewAtomicBroadcast(dbPath string) *AtomicBroadcast {
 	ab.ZTree = &handlers.ZTree{DB: db}
 	ab.Read.ab = ab
 	ab.Write.ab = ab
+
+	ab.ZTree.InitializeDB()
 	return ab
+}
+
+func (ab *AtomicBroadcast) Ping(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprint(w, "pong")
 }
 
 func (ab *AtomicBroadcast) OpenDB(datasource string) (*sql.DB, error) {
@@ -44,8 +49,4 @@ func (ab *AtomicBroadcast) OpenDB(datasource string) (*sql.DB, error) {
 	}
 
 	return db, nil
-}
-
-func (ab *AtomicBroadcast) Ping(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, "pong")
 }

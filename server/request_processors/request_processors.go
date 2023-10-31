@@ -28,11 +28,11 @@ func (rp *RequestProcessor) Routes() http.Handler {
 	// routes
 	mux.Get("/", rp.Zab.Ping)
 	mux.Get("/metadata", rp.Zab.Read.GetAllMetadata)
-	mux.Post("/scoreExists/{leaderServer}", rp.Zab.Read.DoesScoreExist)
+	mux.Post("/scoreExists/{leader}", rp.Zab.Read.DoesScoreExist)
 
 	mux.Post("/score", rp.Zab.Write.AddScore)
 	mux.Post("/metadata", rp.Zab.Write.UpdateMetaData)
-	mux.Delete("/score/{leaderServer}", rp.Zab.Write.DeleteScore)
+	mux.Delete("/score/{leader}", rp.Zab.Write.DeleteScore)
 
 	return mux
 }

@@ -4,11 +4,13 @@ import (
 	"database/sql"
 	"fmt"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/tnbl265/zooweeper/database/models"
 	ensemble "github.com/tnbl265/zooweeper/ensemble"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 )
 
 func main() {
@@ -47,8 +49,32 @@ func main() {
 		}
 	}(server.Rp.Zab.ZTree.Connection())
 
+	// I
+	initZNode(server, port, leader, allServers)
+
 	err := http.ListenAndServe(fmt.Sprintf(":"+portStr), server.Rp.Routes())
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+// initZNode insert first Znode to self-identify
+func initZNode(server *ensemble.Server, port, leader int, allServers []int) {
+	existFirstNode, _ := server.Rp.Zab.ZTree.NodeIdExists(1)
+	if existFirstNode {
+		return
+	}
+	var result []string
+	for _, server := range allServers {
+		result = append(result, strconv.Itoa(server))
+	}
+
+	allServersStr := strings.Join(result, ",")
+
+	metadata := models.Metadata{
+		NodeIp:  strconv.Itoa(port),
+		Leader:  strconv.Itoa(leader),
+		Servers: allServersStr,
+	}
+	server.Rp.Zab.ZTree.InsertMetadata(metadata)
 }

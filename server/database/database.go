@@ -7,10 +7,15 @@ import (
 )
 
 type ZooWeeperDatabaseRepo interface {
+	// Utils
 	Connection() *sql.DB
+	InitializeDB()
+	NodeIdExists(nodeId int) (bool, error)
+
+	// SQL
 	GetServers() ([]string, error)
 	InsertMetadata(metadata models.Metadata) error
 	AllMetadata() ([]*models.Metadata, error)
-	DeleteMetadata(LeaderServer string) error
-	CheckMetadataExist(LeaderServer string) (bool, error)
+	DeleteMetadata(Leader string) error
+	CheckMetadataExist(Leader string) (bool, error)
 }

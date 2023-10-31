@@ -85,7 +85,7 @@ func (wo *WriteOps) UpdateMetaData(w http.ResponseWriter, r *http.Request) {
 }
 
 func (wo *WriteOps) DeleteScore(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "leaderServer")
+	id := chi.URLParam(r, "leader")
 
 	err := wo.ab.ZTree.DeleteMetadata(id)
 	if err != nil {

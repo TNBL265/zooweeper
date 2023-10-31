@@ -2,25 +2,17 @@ package handlers
 
 import (
 	"database/sql"
+	"github.com/tnbl265/zooweeper/database/models"
 	"log"
 	"strings"
-	"time"
-
-	"github.com/tnbl265/zooweeper/database/models"
 )
 
 type ZTree struct {
 	DB *sql.DB
 }
 
-const dbTimeout = time.Second * 3
-
-func (zt *ZTree) Connection() *sql.DB {
-	return zt.DB
-}
-
 func (zt *ZTree) AllMetadata() ([]*models.Metadata, error) {
-	rows, err := zt.DB.Query("SELECT LeaderServer, Servers,  SenderIp, ReceiverIp, Timestamp, Attempts FROM ZNode")
+	rows, err := zt.DB.Query("SELECT * FROM ZNode")
 	if err != nil {
 		log.Println("Error querying the database:", err)
 		return nil, err
@@ -32,7 +24,11 @@ func (zt *ZTree) AllMetadata() ([]*models.Metadata, error) {
 
 	for rows.Next() {
 		var data models.Metadata
-		err := rows.Scan(&data.LeaderServer, &data.Servers, &data.SenderIp, &data.ReceiverIp, &data.Timestamp, &data.Attempts)
+		err := rows.Scan(
+			&data.NodeId, &data.NodeIp, &data.Leader, &data.Servers,
+			&data.Timestamp, &data.Attempts, &data.Version, &data.ParentId,
+			&data.Clients, &data.SenderIp, &data.ReceiverIp,
+		)
 		if err != nil {
 			log.Println("Error scanning data", err)
 			return nil, err
@@ -45,8 +41,8 @@ func (zt *ZTree) AllMetadata() ([]*models.Metadata, error) {
 
 func (zt *ZTree) InsertMetadata(metadata models.Metadata) error {
 	sqlStatement := `
-	INSERT INTO ZNode (LeaderServer, Servers, NodeIp, SenderIp, ReceiverIp, Timestamp, Version, Attempts)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	INSERT INTO ZNode (NodeIp, Leader, Servers, Timestamp, Attempts, Version, ParentId, Clients, SenderIp, ReceiverIp) 
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 `
 
 	row, err := zt.DB.Prepare(sqlStatement)
@@ -56,7 +52,11 @@ func (zt *ZTree) InsertMetadata(metadata models.Metadata) error {
 	}
 	defer row.Close()
 
-	_, err = row.Exec("-", "-", "8080", metadata.SenderIp, metadata.ReceiverIp, metadata.Timestamp, 0, metadata.Attempts)
+	_, err = row.Exec(
+		metadata.NodeIp, metadata.Leader, metadata.Servers, metadata.Timestamp,
+		metadata.Attempts, metadata.Version, metadata.ParentId,
+		metadata.Clients, metadata.SenderIp, metadata.ReceiverIp,
+	)
 	if err != nil {
 		log.Println("Error executing insert row", err)
 		return err
@@ -65,12 +65,12 @@ func (zt *ZTree) InsertMetadata(metadata models.Metadata) error {
 	return nil
 }
 
-func (zt *ZTree) CheckMetadataExist(leaderServer string) (bool, error) {
+func (zt *ZTree) CheckMetadataExist(leader string) (bool, error) {
 
-	sqlStatement := "SELECT COUNT(*) FROM ZNode WHERE LeaderServer = ?"
+	sqlStatement := "SELECT COUNT(*) FROM ZNode WHERE Leader = ?"
 
 	var count int
-	err := zt.DB.QueryRow(sqlStatement, leaderServer).Scan(&count)
+	err := zt.DB.QueryRow(sqlStatement, leader).Scan(&count)
 	if err != nil {
 		log.Println("Error executing reading row", err)
 		return false, err
@@ -79,11 +79,11 @@ func (zt *ZTree) CheckMetadataExist(leaderServer string) (bool, error) {
 	return true, nil
 }
 
-func (zt *ZTree) DeleteMetadata(leaderServer string) error {
+func (zt *ZTree) DeleteMetadata(leader string) error {
 
-	sqlStatement := "DELETE FROM ZNode WHERE LeaderServer = ?"
+	sqlStatement := "DELETE FROM ZNode WHERE Leader = ?"
 
-	_, err := zt.DB.Exec(sqlStatement, leaderServer)
+	_, err := zt.DB.Exec(sqlStatement, leader)
 	if err != nil {
 		log.Println("Error executing delete row", err)
 		return err
