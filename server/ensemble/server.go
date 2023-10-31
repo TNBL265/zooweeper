@@ -2,7 +2,6 @@ package zooweeper
 
 import (
 	rp "github.com/tnbl265/zooweeper/request_processors"
-	"log"
 )
 
 type ServerState string
@@ -19,6 +18,16 @@ type Server struct {
 	allServers []int
 	state      ServerState
 	Rp         rp.RequestProcessor
+}
+
+func NewServer(port, leader int, state ServerState, allServers []int, dbPath string) *Server {
+	return &Server{
+		nodeId:     port,
+		leader:     leader,
+		state:      state,
+		allServers: allServers,
+		Rp:         *rp.NewRequestProcessor(dbPath),
+	}
 }
 
 func (svr *Server) NodeId() int {
@@ -51,21 +60,4 @@ func (svr *Server) State() ServerState {
 
 func (svr *Server) SetState(state ServerState) {
 	svr.state = state
-}
-
-func NewServer(port, leader int, allServers []int) *Server {
-	server := &Server{
-		nodeId:     port,
-		leader:     leader,
-		allServers: allServers,
-	}
-
-	if port == 8080 {
-		server.state = LEADING
-	} else if port == 8081 || port == 8082 {
-		server.state = FOLLOWING
-	} else {
-		log.Fatalf("Only support ports 8080, 8081 or 8082")
-	}
-	return server
 }

@@ -12,6 +12,12 @@ type RequestProcessor struct {
 	Zab zab.AtomicBroadcast
 }
 
+func NewRequestProcessor(dbPath string) *RequestProcessor {
+	return &RequestProcessor{
+		Zab: *zab.NewAtomicBroadcast(dbPath),
+	}
+}
+
 func (rp *RequestProcessor) Routes() http.Handler {
 	mux := chi.NewRouter()
 
@@ -21,12 +27,12 @@ func (rp *RequestProcessor) Routes() http.Handler {
 
 	// routes
 	mux.Get("/", rp.Zab.Ping)
-	mux.Post("/score", rp.Zab.AddScore)
-	mux.Post("/metadata", rp.Zab.UpdateMetaData)
+	mux.Get("/metadata", rp.Zab.Read.GetAllMetadata)
+	mux.Post("/scoreExists/{leaderServer}", rp.Zab.Read.DoesScoreExist)
 
-	mux.Get("/metadata", rp.Zab.GetAllMetadata)
-	mux.Post("/scoreExists/{leaderServer}", rp.Zab.DoesScoreExist)
-	mux.Delete("/score/{leaderServer}", rp.Zab.DeleteScore)
+	mux.Post("/score", rp.Zab.Write.AddScore)
+	mux.Post("/metadata", rp.Zab.Write.UpdateMetaData)
+	mux.Delete("/score/{leaderServer}", rp.Zab.Write.DeleteScore)
 
 	return mux
 }
