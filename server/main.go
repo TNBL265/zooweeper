@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	_ "github.com/mattn/go-sqlite3"
-	ZNodeHandlers "github.com/tnbl265/zooweeper/database/handlers"
 	ensemble "github.com/tnbl265/zooweeper/ensemble"
 	"log"
 	"net/http"
@@ -19,34 +18,28 @@ func main() {
 	}
 	port, _ := strconv.Atoi(portStr)
 
+	var state ensemble.ServerState
 	leader := 8080
 	allServers := []int{8080, 8081, 8082}
 
 	var dbPath string
-
 	switch port {
 	case 8080:
 		dbPath = "database/zooweeper-metadata-0.db"
+		state = ensemble.LEADING
 	case 8081:
 		dbPath = "database/zooweeper-metadata-1.db"
+		state = ensemble.FOLLOWING
 	case 8082:
 		dbPath = "database/zooweeper-metadata-2.db"
+		state = ensemble.FOLLOWING
 	default:
 		log.Fatalf("Only support ports 8080, 8081 or 8082")
 	}
 
-	// Initialization Server
-	log.Println("ZooWeeper Server started on port:", port)
-	server := ensemble.NewServer(port, leader, allServers)
-
-	// Connect to the Database
-	log.Println("Connecting to", dbPath)
-	db, err := server.Rp.Zab.OpenDB(dbPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	server.Rp.Zab.ZTree = &ZNodeHandlers.ZTree{DB: db}
+	// Start Server
+	server := ensemble.NewServer(port, leader, state, allServers, dbPath)
+	log.Printf("Starting Server (%s) on port %s\n", server.State(), portStr)
 	defer func(connection *sql.DB) {
 		err := connection.Close()
 		if err != nil {
@@ -54,9 +47,7 @@ func main() {
 		}
 	}(server.Rp.Zab.ZTree.Connection())
 
-	// Start Server
-	log.Printf("Starting Server (%s) on port %s\n", server.State(), portStr)
-	err = http.ListenAndServe(fmt.Sprintf(":"+portStr), server.Rp.Routes())
+	err := http.ListenAndServe(fmt.Sprintf(":"+portStr), server.Rp.Routes())
 	if err != nil {
 		log.Fatal(err)
 	}
