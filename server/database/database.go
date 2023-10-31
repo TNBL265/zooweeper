@@ -11,8 +11,9 @@ type ZooWeeperDatabaseRepo interface {
 	Connection() *sql.DB
 	InitializeDB()
 	NodeIdExists(nodeId int) (bool, error)
+	GetLocalMetadata() (*models.Metadata, error)
 
-	// SQL
+	// ZNode
 	GetServers() ([]string, error)
 	InsertMetadata(metadata models.Metadata) error
 	AllMetadata() ([]*models.Metadata, error)

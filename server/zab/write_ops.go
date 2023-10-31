@@ -5,12 +5,52 @@ import (
 	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/tnbl265/zooweeper/database/models"
+	"log"
 	"net/http"
 	"strconv"
 )
 
 type WriteOps struct {
 	ab *AtomicBroadcast
+}
+
+func (wo *WriteOps) WriteOpsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		zNode, err := wo.ab.ZTree.GetLocalMetadata()
+		if err != nil {
+			log.Println("WriteOpsMiddleware Error:", err)
+			return
+		}
+
+		if zNode.NodeIp != zNode.Leader {
+			// Follower will forward Request to Leader
+			log.Println("Forwarding request to leader")
+			http.Redirect(w, r, "http://localhost:"+zNode.Leader+r.URL.Path, http.StatusTemporaryRedirect)
+			return
+		} else {
+			// Leader will Propose, wait for Acknowledge, before Commit
+			metadata := wo.ab.CreateMetadata(w, r)
+			wo.ab.startProposal(metadata)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (wo *WriteOps) UpdateMetaData(http.ResponseWriter, *http.Request) {
+}
+
+func (wo *WriteOps) WriteMetaData(w http.ResponseWriter, r *http.Request) {
+	metadata := wo.ab.CreateMetadata(w, r)
+	err := wo.ab.ZTree.InsertMetadata(metadata)
+	if err != nil {
+		wo.ab.errorJSON(w, err, http.StatusBadRequest)
+		log.Fatal(err)
+		return
+	}
+
+	wo.ab.writeJSON(w, http.StatusOK, metadata)
 }
 
 func (wo *WriteOps) AddScore(w http.ResponseWriter, r *http.Request) {
@@ -55,30 +95,6 @@ func (wo *WriteOps) AddScore(w http.ResponseWriter, r *http.Request) {
 	for _, zkPorts := range zkPorts {
 		url := fmt.Sprintf("http://localhost:%s/metadata", strconv.Itoa(zkPorts))
 		_ = wo.ab.makeExternalRequest(w, url, "POST", jsonData)
-	}
-
-	wo.ab.writeJSON(w, http.StatusOK, metadata)
-}
-
-func (wo *WriteOps) UpdateMetaData(w http.ResponseWriter, r *http.Request) {
-	var requestPayload models.Metadata
-
-	err := wo.ab.readJSON(w, r, &requestPayload)
-	if err != nil {
-		wo.ab.errorJSON(w, err, http.StatusBadRequest)
-		return
-	}
-	metadata := models.Metadata{
-		SenderIp:   requestPayload.SenderIp,
-		ReceiverIp: requestPayload.ReceiverIp,
-		Attempts:   requestPayload.Attempts,
-		Timestamp:  requestPayload.Timestamp,
-	}
-
-	err = wo.ab.ZTree.InsertMetadata(metadata)
-	if err != nil {
-		wo.ab.errorJSON(w, err, http.StatusBadRequest)
-		return
 	}
 
 	wo.ab.writeJSON(w, http.StatusOK, metadata)

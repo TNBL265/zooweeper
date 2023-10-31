@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"github.com/tnbl265/zooweeper/database/models"
 	"log"
 )
 
@@ -41,4 +42,21 @@ func (zt *ZTree) NodeIdExists(nodeId int) (bool, error) {
 		return false, err
 	}
 	return count > 0, nil
+}
+
+func (zt *ZTree) GetLocalMetadata() (*models.Metadata, error) {
+	row := zt.DB.QueryRow("SELECT * FROM ZNode WHERE NodeId = 1")
+
+	var data models.Metadata
+	err := row.Scan(
+		&data.NodeId, &data.NodeIp, &data.Leader, &data.Servers,
+		&data.Timestamp, &data.Attempts, &data.Version, &data.ParentId,
+		&data.Clients, &data.SenderIp, &data.ReceiverIp,
+	)
+	if err != nil {
+		log.Println("Error scanning data:", err)
+		return nil, err
+	}
+
+	return &data, nil
 }

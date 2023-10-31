@@ -20,19 +20,32 @@ func NewRequestProcessor(dbPath string) *RequestProcessor {
 
 func (rp *RequestProcessor) Routes() http.Handler {
 	mux := chi.NewRouter()
-
-	// middlewares
 	mux.Use(middleware.Recoverer)
 	mux.Use(rp.Zab.EnableCORS)
 
-	// routes
-	mux.Get("/", rp.Zab.Ping)
-	mux.Get("/metadata", rp.Zab.Read.GetAllMetadata)
-	mux.Post("/scoreExists/{leader}", rp.Zab.Read.DoesScoreExist)
+	// Read Request
+	mux.Group(func(r chi.Router) {
+		r.Get("/", rp.Zab.Ping)
+		r.Get("/metadata", rp.Zab.Read.GetAllMetadata)
+		r.Post("/scoreExists/{leader}", rp.Zab.Read.DoesScoreExist)
+	})
 
-	mux.Post("/score", rp.Zab.Write.AddScore)
-	mux.Post("/metadata", rp.Zab.Write.UpdateMetaData)
-	mux.Delete("/score/{leader}", rp.Zab.Write.DeleteScore)
+	// Write Request
+	mux.Group(func(r chi.Router) {
+		r.Use(rp.Zab.Write.WriteOpsMiddleware)
+
+		r.Post("/score", rp.Zab.Write.AddScore)
+		r.Post("/metadata", rp.Zab.Write.UpdateMetaData)
+		r.Delete("/score/{leader}", rp.Zab.Write.DeleteScore)
+	})
+
+	// Proposal Request
+	mux.Group(func(r chi.Router) {
+		mux.Post("/proposeWrite", rp.Zab.Proposal.ProposeWrite)
+		mux.Post("/acknowledgeProposal", rp.Zab.Proposal.AcknowledgeProposal)
+		mux.Post("/commitWrite", rp.Zab.Proposal.CommitWrite)
+		r.Post("/writeMetadata", rp.Zab.Write.WriteMetaData)
+	})
 
 	return mux
 }
