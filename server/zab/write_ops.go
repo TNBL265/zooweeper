@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/tnbl265/zooweeper/database/models"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -26,7 +27,22 @@ func (wo *WriteOps) WriteOpsMiddleware(next http.Handler) http.Handler {
 		if zNode.NodeIp != zNode.Leader {
 			// Follower will forward Request to Leader
 			log.Println("Forwarding request to leader")
-			http.Redirect(w, r, "http://localhost:"+zNode.Leader+r.URL.Path, http.StatusTemporaryRedirect)
+			resp, err := wo.ab.forwardRequestToLeader(r)
+			if err != nil {
+				// Handle error
+				http.Error(w, "Failed to forward request", http.StatusInternalServerError)
+				return
+			}
+
+			// Copy Header and Status code
+			for name, values := range resp.Header {
+				for _, value := range values {
+					w.Header().Add(name, value)
+				}
+			}
+			w.WriteHeader(resp.StatusCode)
+
+			io.Copy(w, resp.Body)
 			return
 		} else {
 			// Leader will Propose, wait for Acknowledge, before Commit
@@ -38,8 +54,6 @@ func (wo *WriteOps) WriteOpsMiddleware(next http.Handler) http.Handler {
 			wo.ab.startProposal(metadata)
 			return
 		}
-
-		next.ServeHTTP(w, r)
 	})
 }
 

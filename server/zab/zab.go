@@ -116,6 +116,14 @@ func (ab *AtomicBroadcast) CreateMetadata(w http.ResponseWriter, r *http.Request
 	return metadata
 }
 
+func (ab *AtomicBroadcast) forwardRequestToLeader(r *http.Request) (*http.Response, error) {
+	zNode, _ := ab.ZTree.GetLocalMetadata()
+	req, _ := http.NewRequest(r.Method, "http://localhost:"+zNode.Leader+r.URL.Path, r.Body)
+	req.Header = r.Header
+	client := &http.Client{}
+	return client.Do(req)
+}
+
 func (ab *AtomicBroadcast) startProposal(metadata models.Metadata) {
 	ab.SetProposalState(PROPOSED)
 
