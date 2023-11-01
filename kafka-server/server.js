@@ -51,19 +51,40 @@ db.run(createTableSql, (err) => {
 });
 
 app.post("/addScore", (req, res) => {
-  console.log("Adding Score", req.body)
-  const currentTimestamp = new Date().toISOString(); // Get the current time in RFC3339 format
+  console.log("Adding Score", req.body);
 
-  incomingScore = {
+  // 1. Create the incomingScore object
+  let assignedPort = getAssignedPort(req);
+  const incomingScore = createIncomingScore(req, assignedPort);
+
+  // Initialize available ports
+  let z_ports = [8080, 8081, 8082];
+  if (assignedPort) {
+    z_ports = z_ports.filter(port => port !== assignedPort);
+  }
+
+  // Start sending request
+  sendRequest(assignedPort || z_ports.shift(), incomingScore, z_ports, res);
+});
+
+function getAssignedPort(req) {
+  if (req.body && req.body.metadata && req.body.metadata.ReceiverIp) {
+    return parseInt(req.body.metadata.ReceiverIp, 10);
+  }
+  return undefined;
+}
+
+function createIncomingScore(req, assignedPort) {
+  const currentTimestamp = new Date().toISOString();
+  return {
     Timestamp: currentTimestamp,
     Metadata: {
       SenderIp: port,
-      ReceiverIp: req.body.metadata.ReceiverIp.toString(),
+      ReceiverIp: assignedPort ? assignedPort.toString() : undefined,
       Timestamp: currentTimestamp,
       Version: 1,
       Attempts: 1,
       Clients: "9090,9091,9092"
-
     },
     GameResults: {
       Minute: req.body.gameResults.Minute,
@@ -72,45 +93,44 @@ app.post("/addScore", (req, res) => {
       Score: req.body.gameResults.Score,
     },
   };
+}
 
-  let assignedPort = parseInt(req.body.metadata.ReceiverIp, 10);
-  let z_ports = [8080,8081,8082]
-  const base_url = "http://localhost"
+function sendRequest(currentPort, incomingScore, availablePorts, res) {
+  // Update the ReceiverIp in the incomingScore
+  incomingScore.Metadata.ReceiverIp = currentPort.toString();
 
-  function sendRequest(assignedPort) {
+  const base_url = "http://localhost";
+  const options = {
+    method: "POST",
+    uri: base_url + ":" + currentPort + "/metadata",
+    body: incomingScore,
+    json: true,
+    headers: {
+      "Content-Type": "application/json",
+    },
+  };
 
-    const options = {
-      method: "POST",
-      uri: base_url + ":" + assignedPort + "/metadata",
-      body: incomingScore,
-      json: true,
-      headers: {
-        "Content-Type": "application/json",
-      },
-    };
+  request(options, function (error, response, body) {
+    if (!error) {
+      res.sendStatus(200);
+    } else {
+      handleRequestError(currentPort, incomingScore, availablePorts, res);
+    }
+  });
+}
 
-    request(options, function (error, response, body) {
-      if (!error) {
-        res.sendStatus(200);
-      } else {
-        // console.log(error);
-        if (assignedPort !== undefined) {
-          console.log("next port:", assignedPort);
-          z_ports = z_ports.filter(port => port !== assignedPort);
-          console.log(z_ports);
-          assignedPort = z_ports[0]
-          sendRequest(assignedPort);
-        } else {
-          console.log("No more ports to try.");
-          res.sendStatus(404)
-        }
-      }
-    });
-
+function handleRequestError(failedPort, incomingScore, availablePorts, res) {
+  console.log("Failed on port:", failedPort);
+  availablePorts = availablePorts.filter(port => port !== failedPort);
+  if (availablePorts.length > 0) {
+    const nextPort = availablePorts.shift();
+    console.log("Trying next port:", nextPort);
+    sendRequest(nextPort, incomingScore, availablePorts, res);
+  } else {
+    console.log("No more ports to try.");
+    res.sendStatus(404);
   }
-  z_ports = z_ports.filter(port => port !== assignedPort);
-  sendRequest(assignedPort);
-});
+}
 
 // Define a route to handle GET requests
 app.get("/data", (req, res) => {
