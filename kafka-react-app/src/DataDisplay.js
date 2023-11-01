@@ -4,7 +4,7 @@ import axios from "axios";
 
 function DataDisplay() {
   const [data, setData] = useState([]);
-  const port = 9092;
+  const port = 9090;
   console.log(data, "data");
   useEffect(() => {
     // HTTP GET request to your Kafka server's /data endpoint

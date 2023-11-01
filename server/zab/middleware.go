@@ -119,7 +119,6 @@ func (wo *WriteOps) WriteOpsMiddleware(next http.Handler) http.Handler {
 		} else {
 			// Leader will Propose, wait for Acknowledge, before Commit
 			data := wo.ab.CreateMetadata(w, r)
-			log.Println(data)
 			for wo.ab.ProposalState() != COMMITTED {
 				// Propose in sequence to ensure Linearization Write
 				time.Sleep(time.Second)
