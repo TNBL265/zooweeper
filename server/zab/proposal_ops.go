@@ -18,8 +18,8 @@ func (po *ProposalOps) ProposeWrite(w http.ResponseWriter, r *http.Request) {
 		log.Fatalf("I only supposed to receive Propose Write from leader not from %s\n", clientPort)
 	}
 
-	metadata := po.ab.CreateMetadata(w, r)
-	jsonData, _ := json.Marshal(metadata)
+	data := po.ab.CreateMetadata(w, r)
+	jsonData, _ := json.Marshal(data)
 
 	log.Printf("%s Receive Propose Write from %s\n", zNode.NodeIp, clientPort)
 	url := "http://localhost:" + zNode.Leader + "/acknowledgeProposal"
@@ -47,8 +47,8 @@ func (po *ProposalOps) AcknowledgeProposal(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	metadata := po.ab.CreateMetadata(w, r)
-	jsonData, _ := json.Marshal(metadata)
+	data := po.ab.CreateMetadata(w, r)
+	jsonData, _ := json.Marshal(data)
 
 	log.Printf("Asking Follower %s to commit\n", clientPort)
 	url := "http://localhost:" + clientPort + "/commitWrite"
@@ -59,9 +59,9 @@ func (po *ProposalOps) AcknowledgeProposal(w http.ResponseWriter, r *http.Reques
 func (po *ProposalOps) CommitWrite(w http.ResponseWriter, r *http.Request) {
 	zNode, _ := po.ab.ZTree.GetLocalMetadata()
 
-	metadata := po.ab.CreateMetadata(w, r)
-	jsonData, _ := json.Marshal(metadata)
+	data := po.ab.CreateMetadata(w, r)
 
+	jsonData, _ := json.Marshal(data)
 	log.Printf("%s Commiting Write\n", zNode.NodeIp)
 	url := "http://localhost:" + zNode.NodeIp + "/writeMetadata"
 	_ = po.ab.makeExternalRequest(nil, url, "POST", jsonData)

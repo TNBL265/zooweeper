@@ -3,6 +3,7 @@
 package zooweeper
 
 import (
+	"container/heap"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -34,6 +35,8 @@ type AtomicBroadcast struct {
 	ackCounter    int
 	proposalState ProposalState
 	proposalMu    sync.Mutex
+
+	pq PriorityQueue
 }
 
 func (ab *AtomicBroadcast) AckCounter() int {
@@ -77,6 +80,9 @@ func NewAtomicBroadcast(dbPath string) *AtomicBroadcast {
 
 	ab.proposalState = COMMITTED
 
+	ab.pq = make(PriorityQueue, 0)
+	heap.Init(&ab.pq)
+
 	ab.ZTree.InitializeDB()
 	return ab
 }
@@ -99,21 +105,20 @@ func (ab *AtomicBroadcast) OpenDB(datasource string) (*sql.DB, error) {
 	return db, nil
 }
 
-func (ab *AtomicBroadcast) CreateMetadata(w http.ResponseWriter, r *http.Request) models.Metadata {
-	var requestPayload models.Metadata
+func (ab *AtomicBroadcast) CreateMetadata(w http.ResponseWriter, r *http.Request) models.Data {
+	var requestPayload models.Data
 
 	err := ab.readJSON(w, r, &requestPayload)
 	if err != nil {
 		ab.errorJSON(w, err, http.StatusBadRequest)
-		return models.Metadata{}
+		return models.Data{}
 	}
-	metadata := models.Metadata{
-		SenderIp:   requestPayload.SenderIp,
-		ReceiverIp: requestPayload.ReceiverIp,
-		Attempts:   requestPayload.Attempts,
-		Timestamp:  requestPayload.Timestamp,
+	data := models.Data{
+		Timestamp:   requestPayload.Timestamp,
+		Metadata:    requestPayload.Metadata,
+		GameResults: requestPayload.GameResults,
 	}
-	return metadata
+	return data
 }
 
 func (ab *AtomicBroadcast) forwardRequestToLeader(r *http.Request) (*http.Response, error) {
@@ -124,11 +129,10 @@ func (ab *AtomicBroadcast) forwardRequestToLeader(r *http.Request) (*http.Respon
 	return client.Do(req)
 }
 
-func (ab *AtomicBroadcast) startProposal(metadata models.Metadata) {
+func (ab *AtomicBroadcast) startProposal(data models.Data) {
 	ab.SetProposalState(PROPOSED)
 
-	jsonData, _ := json.Marshal(metadata)
-
+	jsonData, _ := json.Marshal(data)
 	zNode, _ := ab.ZTree.GetLocalMetadata()
 	portsSlice := strings.Split(zNode.Servers, ",")
 	for _, port := range portsSlice {
