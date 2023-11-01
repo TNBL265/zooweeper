@@ -32,6 +32,7 @@ func (rp *RequestProcessor) Routes() http.Handler {
 
 	// Write Request
 	mux.Group(func(r chi.Router) {
+		r.Use(rp.Zab.QueueMiddleware)
 		r.Use(rp.Zab.Write.WriteOpsMiddleware)
 
 		r.Post("/score", rp.Zab.Write.AddScore)

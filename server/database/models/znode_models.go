@@ -22,6 +22,7 @@ type GameResults struct {
 }
 
 type Data struct {
-	Metadata
-	GameResults
+	Timestamp   string      `json:"Timestamp"`
+	Metadata    Metadata    `json:"Metadata"`
+	GameResults GameResults `json:"GameResults"`
 }

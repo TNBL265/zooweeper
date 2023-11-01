@@ -5,71 +5,27 @@ import (
 	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/tnbl265/zooweeper/database/models"
-	"io"
 	"log"
 	"net/http"
 	"strconv"
-	"time"
 )
 
 type WriteOps struct {
 	ab *AtomicBroadcast
 }
 
-func (wo *WriteOps) WriteOpsMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		zNode, err := wo.ab.ZTree.GetLocalMetadata()
-		if err != nil {
-			log.Println("WriteOpsMiddleware Error:", err)
-			return
-		}
-
-		if zNode.NodeIp != zNode.Leader {
-			// Follower will forward Request to Leader
-			log.Println("Forwarding request to leader")
-			resp, err := wo.ab.forwardRequestToLeader(r)
-			if err != nil {
-				// Handle error
-				http.Error(w, "Failed to forward request", http.StatusInternalServerError)
-				return
-			}
-
-			// Copy Header and Status code
-			for name, values := range resp.Header {
-				for _, value := range values {
-					w.Header().Add(name, value)
-				}
-			}
-			w.WriteHeader(resp.StatusCode)
-
-			io.Copy(w, resp.Body)
-			return
-		} else {
-			// Leader will Propose, wait for Acknowledge, before Commit
-			metadata := wo.ab.CreateMetadata(w, r)
-			for wo.ab.ProposalState() != COMMITTED {
-				// Propose in sequence to ensure Linearization Write
-				time.Sleep(time.Second)
-			}
-			wo.ab.startProposal(metadata)
-			return
-		}
-	})
-}
-
 func (wo *WriteOps) UpdateMetaData(http.ResponseWriter, *http.Request) {
 }
 
 func (wo *WriteOps) WriteMetaData(w http.ResponseWriter, r *http.Request) {
-	metadata := wo.ab.CreateMetadata(w, r)
-	err := wo.ab.ZTree.InsertMetadata(metadata)
+	data := wo.ab.CreateMetadata(w, r)
+	err := wo.ab.ZTree.InsertMetadata(data.Metadata)
 	if err != nil {
 		wo.ab.errorJSON(w, err, http.StatusBadRequest)
 		log.Fatal(err)
 		return
 	}
-
-	wo.ab.writeJSON(w, http.StatusOK, metadata)
+	wo.ab.writeJSON(w, http.StatusOK, data)
 }
 
 func (wo *WriteOps) AddScore(w http.ResponseWriter, r *http.Request) {
