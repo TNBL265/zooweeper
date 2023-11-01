@@ -76,5 +76,5 @@ func initZNode(server *ensemble.Server, port, leader int, allServers []int) {
 		Leader:  strconv.Itoa(leader),
 		Servers: allServersStr,
 	}
-	server.Rp.Zab.ZTree.InsertMetadata(metadata)
+	server.Rp.Zab.ZTree.InsertMetadata(metadata, 0)
 }

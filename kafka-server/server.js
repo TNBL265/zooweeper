@@ -33,6 +33,23 @@ let db = new sqlite3.Database(dbPath, (err) => {
   console.log(`Connected to the ${dbPath} SQLite database.`);
 });
 
+// Create 'events' table if it doesn't exist
+let createTableSql = `
+CREATE TABLE IF NOT EXISTS events (
+  Minute INT NOT NULL,
+  Player TEXT NOT NULL,
+  Club TEXT NOT NULL,
+  Score TEXT NOT NULL
+);`;
+
+db.run(createTableSql, (err) => {
+  if (err) {
+    console.error("Error creating table: ", err.message);
+  } else {
+    console.log("Events table created or already exists.");
+  }
+});
+
 app.post("/addScore", (req, res) => {
   console.log("Adding Score", req.body)
   const currentTimestamp = new Date().toISOString(); // Get the current time in RFC3339 format
@@ -40,9 +57,13 @@ app.post("/addScore", (req, res) => {
   incomingScore = {
     Timestamp: currentTimestamp,
     Metadata: {
-      SenderIp: req.body.metadata.SenderIp,
+      SenderIp: port,
       ReceiverIp: req.body.metadata.ReceiverIp.toString(),
       Timestamp: currentTimestamp,
+      Version: 1,
+      Attempts: 1,
+      Clients: "9090,9091,9092"
+
     },
     GameResults: {
       Minute: req.body.gameResults.Minute,
@@ -97,7 +118,6 @@ app.get("/data", (req, res) => {
     if (err) {
       return console.error(err.message);
     }
-    console.log('/data/data/data')
 
     // This will send an array of rows to the frontend.
     res.send(rows);
