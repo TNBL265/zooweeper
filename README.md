@@ -1,10 +1,12 @@
-# ZooWeeper: 50.041 Distributed System Project
+ # ZooWeeper: 50.041 Distributed System Project
 
 ## Technical Diagrams
 ### High-Level Architecture
- ![](assets/system_architecture.png)
+![image](https://github.com/TNBL265/zooweeper/assets/84057800/67a7d3ea-9586-4ad3-8701-db11fa0294db)
+
 ### Implementation Focus (Checkpoint 1)
-![](assets/request_processor_flow.png)
+![image](https://github.com/TNBL265/zooweeper/assets/84057800/a27402fe-e84e-414c-a61b-307a840be2f2)
+
 
 ## Local development
 ### Postman
