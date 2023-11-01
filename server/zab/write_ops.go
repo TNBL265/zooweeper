@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 type WriteOps struct {
@@ -30,6 +31,10 @@ func (wo *WriteOps) WriteOpsMiddleware(next http.Handler) http.Handler {
 		} else {
 			// Leader will Propose, wait for Acknowledge, before Commit
 			metadata := wo.ab.CreateMetadata(w, r)
+			for wo.ab.ProposalState() != COMMITTED {
+				// Propose in sequence to ensure Linearization Write
+				time.Sleep(time.Second)
+			}
 			wo.ab.startProposal(metadata)
 			return
 		}
