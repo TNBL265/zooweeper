@@ -1,10 +1,9 @@
 {
 	"info": {
-		"_postman_id": "aba19759-f469-47bc-b191-35ba91cb5d1c",
+		"_postman_id": "eb95cfa8-d19d-4cf5-952b-fa680331a4c1",
 		"name": "Go Server",
-		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
-		"_exporter_id": "30669795",
-		"_collection_link": "https://dsc-zooweeper.postman.co/workspace/Team-Workspace~32c9bc3a-2316-4149-8636-3eb3047b2b96/collection/30669795-aba19759-f469-47bc-b191-35ba91cb5d1c?action=share&source=collection_link&creator=30669795"
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "28452306"
 	},
 	"item": [
 		{
@@ -12,7 +11,15 @@
 			"request": {
 				"method": "GET",
 				"header": [],
-				"url": "{{goBaseUrl}}/"
+				"url": {
+					"raw": "{{goBaseUrl}}/",
+					"host": [
+						"{{goBaseUrl}}"
+					],
+					"path": [
+						""
+					]
+				}
 			},
 			"response": []
 		},
@@ -21,7 +28,15 @@
 			"request": {
 				"method": "GET",
 				"header": [],
-				"url": "{{goBaseUrl}}/metadata"
+				"url": {
+					"raw": "{{goBaseUrl}}/metadata",
+					"host": [
+						"{{goBaseUrl}}"
+					],
+					"path": [
+						"metadata"
+					]
+				}
 			},
 			"response": []
 		},
@@ -39,7 +54,15 @@
 						}
 					}
 				},
-				"url": "{{goBaseUrl}}/score"
+				"url": {
+					"raw": "{{goBaseUrl}}/score",
+					"host": [
+						"{{goBaseUrl}}"
+					],
+					"path": [
+						"score"
+					]
+				}
 			},
 			"response": []
 		},
@@ -48,7 +71,16 @@
 			"request": {
 				"method": "DELETE",
 				"header": [],
-				"url": "{{baseurl}}/score/testleader1"
+				"url": {
+					"raw": "{{baseurl}}/score/testleader1",
+					"host": [
+						"{{baseurl}}"
+					],
+					"path": [
+						"score",
+						"testleader1"
+					]
+				}
 			},
 			"response": []
 		},
@@ -57,7 +89,49 @@
 			"request": {
 				"method": "POST",
 				"header": [],
-				"url": "{{goBaseUrl}}/scoreExists/192.168.1.1"
+				"url": {
+					"raw": "{{goBaseUrl}}/scoreExists/192.168.1.1",
+					"host": [
+						"{{goBaseUrl}}"
+					],
+					"path": [
+						"scoreExists",
+						"192.168.1.1"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Update Metadata",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"var moment = require(\"moment\");",
+							"pm.globals.set(\"CurrentDateTime\", moment().format())"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"Timestamp\": \"{{CurrentDateTime}}\",\n    \"Metadata\": {\n        \"SenderIp\":\"test\",\n        \"ReceiverIp\":\"test\",\n        \"Timestamp\":\"{{CurrentDateTime}}\",\n        \"Attempts\":2\n    },\n    \"GameResults\": {}\n}   "
+				},
+				"url": {
+					"raw": "{{goBaseUrl}}/metadata",
+					"host": [
+						"{{goBaseUrl}}"
+					],
+					"path": [
+						"metadata"
+					]
+				}
 			},
 			"response": []
 		}

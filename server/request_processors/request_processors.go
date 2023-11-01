@@ -35,7 +35,7 @@ func (rp *RequestProcessor) Routes() http.Handler {
 		r.Use(rp.Zab.QueueMiddleware)
 		r.Use(rp.Zab.Write.WriteOpsMiddleware)
 
-		r.Post("/score", rp.Zab.Write.AddScore)
+		//r.Post("/score", rp.Zab.Write.AddScore)
 		r.Post("/metadata", rp.Zab.Write.UpdateMetaData)
 		r.Delete("/score/{leader}", rp.Zab.Write.DeleteScore)
 	})

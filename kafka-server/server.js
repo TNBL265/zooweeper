@@ -8,16 +8,16 @@ const cors = require("cors");
 app.use(cors());
 app.use(express.json());
 
-let port = process.env.PORT || 9090;
+let port = process.env.PORT || "9090";
 let dbPath;
 switch (port) {
-  case '9090':
+  case "9090":
     dbPath = 'kafka-events-0.db';
     break;
-  case '9091':
+  case "9091":
     dbPath = 'kafka-events-1.db';
     break;
-  case '9092':
+  case "9092":
     dbPath = 'kafka-events-2.db';
     break;
   default:
@@ -38,11 +38,11 @@ app.post("/addScore", (req, res) => {
   const currentTimestamp = new Date().toISOString(); // Get the current time in RFC3339 format
 
   incomingScore = {
+    Timestamp: currentTimestamp,
     Metadata: {
       SenderIp: req.body.metadata.SenderIp,
-      ReceiverIp: req.body.metadata.ReceiverIp,
+      ReceiverIp: req.body.metadata.ReceiverIp.toString(),
       Timestamp: currentTimestamp,
-      Attempts: req.body.metadata.Attempts,
     },
     GameResults: {
       Minute: req.body.gameResults.Minute,
@@ -52,23 +52,43 @@ app.post("/addScore", (req, res) => {
     },
   };
 
-  const options = {
-    method: "POST",
-    uri: "http://localhost:8080/score",
-    body: incomingScore,
-    json: true,
-    headers: {
-      "Content-Type": "application/json",
-    },
-  };
+  let assignedPort = parseInt(req.body.metadata.ReceiverIp, 10);
+  let z_ports = [8080,8081,8082]
+  const base_url = "http://localhost"
 
-  request(options, function (error, response, body) {
-    if (!error) {
-      res.sendStatus(200);
-    } else {
-      console.log(error);
-    }
-  });
+  function sendRequest(assignedPort) {
+
+    const options = {
+      method: "POST",
+      uri: base_url + ":" + assignedPort + "/metadata",
+      body: incomingScore,
+      json: true,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    };
+
+    request(options, function (error, response, body) {
+      if (!error) {
+        res.sendStatus(200);
+      } else {
+        // console.log(error);
+        if (assignedPort !== undefined) {
+          console.log("next port:", assignedPort);
+          z_ports = z_ports.filter(port => port !== assignedPort);
+          console.log(z_ports);
+          assignedPort = z_ports[0]
+          sendRequest(assignedPort);
+        } else {
+          console.log("No more ports to try.");
+          res.sendStatus(404)
+        }
+      }
+    });
+
+  }
+  z_ports = z_ports.filter(port => port !== assignedPort);
+  sendRequest(assignedPort);
 });
 
 // Define a route to handle GET requests
@@ -77,6 +97,7 @@ app.get("/data", (req, res) => {
     if (err) {
       return console.error(err.message);
     }
+    console.log('/data/data/data')
 
     // This will send an array of rows to the frontend.
     res.send(rows);
