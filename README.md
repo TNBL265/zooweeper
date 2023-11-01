@@ -24,11 +24,6 @@ PORT=8080 go run main.go
 ```
 - Output: `pong` on `localhost:8080`
 ### Kafka Server (Express)
-- Create database:
-```shell
-cd zooweeper/kafka-server
-sqlite3 kafka-events-0.db < kafka-events.sql
-```
 - Run:
 ```shell
 cd zooweeper/kafka-server

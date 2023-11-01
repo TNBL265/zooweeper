@@ -39,7 +39,7 @@ func (zt *ZTree) AllMetadata() ([]*models.Metadata, error) {
 	return results, nil
 }
 
-func (zt *ZTree) InsertMetadata(metadata models.Metadata) error {
+func (zt *ZTree) InsertMetadata(metadata models.Metadata, parentId int) error {
 	sqlStatement := `
 	INSERT INTO ZNode (NodeIp, Leader, Servers, Timestamp, Attempts, Version, ParentId, Clients, SenderIp, ReceiverIp) 
 	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
@@ -54,11 +54,70 @@ func (zt *ZTree) InsertMetadata(metadata models.Metadata) error {
 
 	_, err = row.Exec(
 		metadata.NodeIp, metadata.Leader, metadata.Servers, metadata.Timestamp,
-		metadata.Attempts, metadata.Version, metadata.ParentId,
+		metadata.Attempts, metadata.Version, parentId,
 		metadata.Clients, metadata.SenderIp, metadata.ReceiverIp,
 	)
 	if err != nil {
 		log.Println("Error executing insert row", err)
+		return err
+	}
+
+	return nil
+}
+
+func (zt *ZTree) UpsertMetadata(metadata models.Metadata) error {
+	exists, err := zt.parentProcessExist(metadata.SenderIp)
+	if err != nil {
+		log.Println("Error checking entry existence:", err)
+		return err
+	}
+
+	if !exists {
+		// Insert parent process with parentId=1 (direct child of Zookeeper)
+		err = zt.insertParentProcessMetadata(metadata)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Insert actual metadata with ParentId=2 (child of above parent process)
+	err = zt.InsertMetadata(metadata, 2)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (zt *ZTree) parentProcessExist(senderIp string) (bool, error) {
+	sqlCheck := `SELECT COUNT(*) FROM ZNode WHERE SenderIp = ?`
+	var count int
+	err := zt.DB.QueryRow(sqlCheck, senderIp).Scan(&count)
+	if err != nil {
+		log.Println("Error checking row existence:", err)
+		return false, err
+	}
+	return count > 0, nil
+}
+
+func (zt *ZTree) insertParentProcessMetadata(metadata models.Metadata) error {
+	sqlPartialInsert := `
+	INSERT INTO ZNode (NodeIp, Leader, Servers, Timestamp, Attempts, Version, ParentId, Clients, SenderIp, ReceiverIp) 
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+`
+	row, err := zt.DB.Prepare(sqlPartialInsert)
+	if err != nil {
+		log.Println("Error preparing row for partial insert:", err)
+		return err
+	}
+	defer row.Close()
+
+	_, err = row.Exec(
+		metadata.NodeIp, "", "", "", 0, 0, 1,
+		metadata.Clients, metadata.SenderIp, metadata.ReceiverIp,
+	)
+	if err != nil {
+		log.Println("Error executing partial insert:", err)
 		return err
 	}
 
@@ -92,9 +151,9 @@ func (zt *ZTree) DeleteMetadata(leader string) error {
 	return nil
 }
 
-func (zt *ZTree) GetServers() ([]string, error) {
-	sqlStatement := "SELECT Servers FROM ZNode WHERE NodeId = ?"
-	rows, err := zt.DB.Query(sqlStatement, 1)
+func (zt *ZTree) GetClients() ([]string, error) {
+	sqlStatement := "SELECT Clients FROM ZNode WHERE NodeId = ?"
+	rows, err := zt.DB.Query(sqlStatement, 2)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +167,7 @@ func (zt *ZTree) GetServers() ([]string, error) {
 		}
 	}
 
-	servers := strings.Split(serversStr, ", ")
+	servers := strings.Split(serversStr, ",")
 
 	return servers, nil
 }

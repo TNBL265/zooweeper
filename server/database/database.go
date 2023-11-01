@@ -14,8 +14,9 @@ type ZooWeeperDatabaseRepo interface {
 	GetLocalMetadata() (*models.Metadata, error)
 
 	// ZNode
-	GetServers() ([]string, error)
-	InsertMetadata(metadata models.Metadata) error
+	GetClients() ([]string, error)
+	InsertMetadata(metadata models.Metadata, parentId int) error
+	UpsertMetadata(metadata models.Metadata) error
 	AllMetadata() ([]*models.Metadata, error)
 	DeleteMetadata(Leader string) error
 	CheckMetadataExist(Leader string) (bool, error)
