@@ -30,7 +30,7 @@ func (wo *WriteOps) WriteMetaData(w http.ResponseWriter, r *http.Request) {
 		ports, _ := wo.ab.ZTree.GetClients()
 		jsonData, _ := json.Marshal(data.GameResults)
 		for _, port := range ports {
-			url := fmt.Sprintf("http://localhost:%s/updateScore", port)
+			url := fmt.Sprintf("%s:%s/updateScore", wo.ab.BaseURL, port)
 			_ = wo.ab.makeExternalRequest(w, url, "POST", jsonData)
 		}
 	}

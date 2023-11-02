@@ -22,7 +22,7 @@ func (po *ProposalOps) ProposeWrite(w http.ResponseWriter, r *http.Request) {
 	jsonData, _ := json.Marshal(data)
 
 	log.Printf("%s Receive Propose Write from %s\n", zNode.NodeIp, clientPort)
-	url := "http://localhost:" + zNode.Leader + "/acknowledgeProposal"
+	url := po.ab.BaseURL + ":" + zNode.Leader + "/acknowledgeProposal"
 	_ = po.ab.makeExternalRequest(nil, url, "POST", jsonData)
 }
 
@@ -51,7 +51,7 @@ func (po *ProposalOps) AcknowledgeProposal(w http.ResponseWriter, r *http.Reques
 	jsonData, _ := json.Marshal(data)
 
 	log.Printf("Asking Follower %s to commit\n", clientPort)
-	url := "http://localhost:" + clientPort + "/commitWrite"
+	url := po.ab.BaseURL + ":" + clientPort + "/commitWrite"
 	_ = po.ab.makeExternalRequest(nil, url, "POST", jsonData)
 
 }
@@ -63,6 +63,6 @@ func (po *ProposalOps) CommitWrite(w http.ResponseWriter, r *http.Request) {
 
 	jsonData, _ := json.Marshal(data)
 	log.Printf("%s Commiting Write\n", zNode.NodeIp)
-	url := "http://localhost:" + zNode.NodeIp + "/writeMetadata"
+	url := po.ab.BaseURL + ":" + zNode.NodeIp + "/writeMetadata"
 	_ = po.ab.makeExternalRequest(nil, url, "POST", jsonData)
 }

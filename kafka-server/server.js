@@ -4,6 +4,7 @@ const sqlite3 = require("sqlite3").verbose();
 const app = express();
 const request = require("request-promise");
 const cors = require("cors");
+const base_url = process.env.BASE_URL || "http://localhost";
 
 app.use(cors());
 app.use(express.json());
@@ -99,7 +100,6 @@ function sendRequest(currentPort, incomingScore, availablePorts, res) {
   // Update the ReceiverIp in the incomingScore
   incomingScore.Metadata.ReceiverIp = currentPort.toString();
 
-  const base_url = "http://localhost";
   const options = {
     method: "POST",
     uri: base_url + ":" + currentPort + "/metadata",

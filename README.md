@@ -2,11 +2,31 @@
 
 ## Technical Diagrams
 ### High-Level Architecture
-![image](https://github.com/TNBL265/zooweeper/assets/84057800/67a7d3ea-9586-4ad3-8701-db11fa0294db)
+![](assets/system_architecture.png)
 
-### Implementation Focus (Checkpoint 1)
-![image](https://github.com/TNBL265/zooweeper/assets/84057800/a27402fe-e84e-414c-a61b-307a840be2f2)
+### ZooKeeper Internal Architecture
+![](assets/zookeeper_internal_architecture.jpg)
 
+### Implementation Focus (Checkpoint 2)
+![](assets/request_processor_flow.png)
+
+## ZooKeeper Internals
+### 1. Data Synchronization: [./server/zab](./server/zab/zab.go)
+#### Atomic Broadcast Protocol
+- **Reliable delivery**:
+  - using `WriteOpsMiddleware` to process all Write request:
+    - All Write requests to Follower is forwarded to Leader
+    - Leader only commit Write request once all Followers acknowledged
+- **Total order**:
+  - using state `ProposalState` and mutex `proposalMu`
+    - requests are processed according to state changes
+- **Causal order**:
+  - using a min Priority Queue to order `RequestItem` by timestamp from Client's requests
+  - assumption: no clock synchronization issue between Clients
+#### Linearization Write and FIFO Client Order
+- By ensuring 3 properties above
+### 2. Distributed Coordination
+### 3. Fault Tolerance
 
 ## Local development
 ### Postman
@@ -43,15 +63,22 @@ PORT=3000 npm start
 ### Distributed System Demo
 - Overview: The above applications would be dockerized:
   - 3x Zookeeper Server
-  - 2x Kafka Server (Express)
-  - 1x Kafka Client Application (React)
+  - 3x Kafka Server (Express)
+  - 2x Kafka Client Application (React)
+- Should delete all your `.db` file else the build will be very slow
 - Run:
 ```shell
 cd zooweeper
 docker-compose up
 ```
+- Test sending of `100` requests
+```shell
+cd zooweeper
+./send_requests.sh 100
+```
 
 ## References:
+- [Zookeeper Internals](https://zookeeper.apache.org/doc/r3.9.0/zookeeperInternals.html)
 - [Apache Zookeeper Java implementation](https://github.com/apache/zookeeper)
 - [Zookeeper Paper](https://pdos.csail.mit.edu/6.824/papers/zookeeper.pdf)
 - [Zab Paper](https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=5958223)
