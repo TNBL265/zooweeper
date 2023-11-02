@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 
+const base_url = process.env.BASE_URL || "http://localhost";
+
 function DataDisplay() {
     const [data, setData] = useState([]);
 
@@ -16,7 +18,7 @@ function DataDisplay() {
     useEffect(() => {
         // HTTP GET request to your Kafka server's /data endpoint
         axios
-            .get(`http://localhost:${port}/data`)
+            .get(`${base_url}:${port}/data`)
             .then((response) => {
                 setData(response.data);
             })
@@ -31,7 +33,7 @@ function DataDisplay() {
             <ul>
                 {data.map((item, index) => (
                     <li key={index}>
-                        {item.Min} mins - {item.Player} ({item.Club}) - Score: {item.Score}
+                        {item.Minute} mins - {item.Player} ({item.Club}) - Score: {item.Score}
                     </li>
                 ))}
             </ul>

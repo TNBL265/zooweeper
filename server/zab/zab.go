@@ -12,6 +12,7 @@ import (
 	"github.com/tnbl265/zooweeper/database/models"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -26,6 +27,8 @@ const (
 )
 
 type AtomicBroadcast struct {
+	BaseURL string
+
 	Read     ReadOps
 	Write    WriteOps
 	Proposal ProposalOps
@@ -66,6 +69,11 @@ func (ab *AtomicBroadcast) SetProposalState(proposalState ProposalState) {
 
 func NewAtomicBroadcast(dbPath string) *AtomicBroadcast {
 	ab := &AtomicBroadcast{}
+	baseURL := os.Getenv("BASE_URL")
+	if baseURL == "" {
+		baseURL = "http://localhost"
+	}
+	ab.BaseURL = baseURL
 
 	// Connect to the Database
 	log.Println("Connecting to", dbPath)
@@ -123,7 +131,7 @@ func (ab *AtomicBroadcast) CreateMetadata(w http.ResponseWriter, r *http.Request
 
 func (ab *AtomicBroadcast) forwardRequestToLeader(r *http.Request) (*http.Response, error) {
 	zNode, _ := ab.ZTree.GetLocalMetadata()
-	req, _ := http.NewRequest(r.Method, "http://localhost:"+zNode.Leader+r.URL.Path, r.Body)
+	req, _ := http.NewRequest(r.Method, ab.BaseURL+":"+zNode.Leader+r.URL.Path, r.Body)
 	req.Header = r.Header
 	client := &http.Client{}
 	return client.Do(req)
@@ -138,7 +146,7 @@ func (ab *AtomicBroadcast) startProposal(data models.Data) {
 	for _, port := range portsSlice {
 		if port != zNode.NodeIp {
 			log.Println("Proposing to Follower:", port)
-			url := "http://localhost:" + port + "/proposeWrite"
+			url := ab.BaseURL + ":" + port + "/proposeWrite"
 			_ = ab.makeExternalRequest(nil, url, "POST", jsonData)
 		}
 	}
@@ -148,7 +156,7 @@ func (ab *AtomicBroadcast) startProposal(data models.Data) {
 		time.Sleep(time.Second)
 	}
 	log.Println("Leader committing")
-	url := "http://localhost:" + zNode.NodeIp + "/writeMetadata"
+	url := ab.BaseURL + ":" + zNode.NodeIp + "/writeMetadata"
 	_ = ab.makeExternalRequest(nil, url, "POST", jsonData)
 	ab.SetProposalState(COMMITTED)
 }
