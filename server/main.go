@@ -99,6 +99,7 @@ func (ab *AtomicBroadcastCopy) listenForLeaderElection(server *ensemble.Server, 
 }
 
 func startLeaderElection(server *ensemble.Server, currentPort int, allServers []int) {
+	hasFailedElection := false
 	for _, outgoingPort := range allServers {
 
 		if outgoingPort < currentPort || outgoingPort == currentPort {
@@ -141,9 +142,14 @@ func startLeaderElection(server *ensemble.Server, currentPort int, allServers []
 			continue
 		}
 
-		fmt.Printf("RESPONSE:::::: %s\n", responseObject.IsSuccess)
+		responseBool, _ := strconv.ParseBool(responseObject.IsSuccess)
+		if !responseBool {
+			hasFailedElection = true
+		}
 
 	}
+
+	color.Red("results is %t", hasFailedElection)
 }
 
 func ping(server *ensemble.Server, currentPort string) (string, error) {

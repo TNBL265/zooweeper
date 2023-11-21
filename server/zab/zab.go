@@ -3,11 +3,15 @@
 package zooweeper
 
 import (
+	"bytes"
 	"container/heap"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -136,6 +140,74 @@ func (ab *AtomicBroadcast) ElectLeader(portStr string) http.HandlerFunc {
 
 		payload := models.ElectLeaderResponse{
 			IsSuccess: strconv.FormatBool(incomingPortNumber > currentPortNumber),
+		}
+
+		if incomingPortNumber < currentPortNumber {
+			//
+			metadata, _ := ab.ZTree.GetLocalMetadata()
+			allServers := strings.Split(metadata.Servers, ",")
+
+			hasFailedElection := false
+			for _, outgoingPort := range allServers {
+				outgoingPortNumber, _ := strconv.Atoi(outgoingPort)
+				if outgoingPortNumber < currentPortNumber || outgoingPortNumber == currentPortNumber {
+					continue
+				}
+
+				//make a request
+				client := &http.Client{}
+				portURL := fmt.Sprintf("%s", outgoingPort)
+
+				url := fmt.Sprintf(ab.BaseURL + ":" + portURL + "/electLeader")
+				var electMessage models.ElectLeaderRequest = models.ElectLeaderRequest{
+					IncomingPort: fmt.Sprintf("%d", currentPortNumber),
+				}
+				jsonData, _ := json.Marshal(electMessage)
+
+				req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+				req.Header.Add("Accept", "application/json")
+				req.Header.Add("Content-Type", "application/json")
+
+				ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+				defer cancel()
+
+				req = req.WithContext(ctx)
+				color.Red(url)
+				// CONNECTION
+				resp, err := client.Do(req)
+				if err != nil || resp == nil {
+
+					continue
+				}
+				if err != nil {
+					continue
+				}
+
+				defer resp.Body.Close()
+				resBody, err := ioutil.ReadAll(resp.Body)
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+				var responseObject models.ElectLeaderResponse
+				err = json.Unmarshal(resBody, &responseObject)
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+
+				fmt.Printf("RESPONSE:::::: %s\n", responseObject.IsSuccess)
+				responseBool, _ := strconv.ParseBool(responseObject.IsSuccess)
+				if !responseBool {
+					hasFailedElection = true
+				}
+
+			}
+			color.Red("results is %t", hasFailedElection)
 		}
 
 		_ = ab.writeJSON(w, http.StatusOK, payload)
