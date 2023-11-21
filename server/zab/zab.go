@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -115,6 +116,26 @@ func (ab *AtomicBroadcast) Ping(portStr string) http.HandlerFunc {
 		payload := models.HealthCheck{
 			Message:    "pong",
 			PortNumber: portStr,
+		}
+
+		_ = ab.writeJSON(w, http.StatusOK, payload)
+	}
+}
+func (ab *AtomicBroadcast) ElectLeader(portStr string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var requestPayload models.ElectLeaderRequest
+		err := ab.readJSON(w, r, &requestPayload)
+		if err != nil {
+			ab.errorJSON(w, err, http.StatusBadRequest)
+			return
+		}
+		color.Magenta("Received election message from Port:%s \n", requestPayload.IncomingPort)
+
+		incomingPortNumber, _ := strconv.Atoi(requestPayload.IncomingPort)
+		currentPortNumber, _ := strconv.Atoi(portStr)
+
+		payload := models.ElectLeaderResponse{
+			IsSuccess: strconv.FormatBool(incomingPortNumber > currentPortNumber),
 		}
 
 		_ = ab.writeJSON(w, http.StatusOK, payload)
