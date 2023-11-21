@@ -17,3 +17,6 @@ type ElectLeaderRequest struct {
 type ElectLeaderResponse struct {
 	IsSuccess string `json:"isSuccess"`
 }
+type DeclareLeaderRequest struct {
+	IncomingPort string `json:"port"`
+}
