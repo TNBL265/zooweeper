@@ -61,14 +61,9 @@ func main() {
 	myAB := &AtomicBroadcastCopy{AtomicBroadcast: server.Rp.Zab}
 	go myAB.listenForLeaderElection(port, leader)
 	go func() {
-		errPort, err := ping(server, portStr)
+		_, err := ping(server, portStr)
 		if err != nil {
-			errorData := models.HealthCheckError{
-				Error:     err,
-				ErrorPort: errPort,
-			}
-			server.Rp.Zab.ErrorLeaderChan <- errorData
-
+			// do sth
 		} else {
 			fmt.Println("Ping successful")
 		}
@@ -93,7 +88,7 @@ func (ab *AtomicBroadcastCopy) listenForLeaderElection(port int, leader int) {
 		case errorData := <-ab.ErrorLeaderChan:
 			errorPortNumber, _ := strconv.Atoi(errorData.ErrorPort)
 			if errorPortNumber == leader {
-				color.Blue("Error from ping healthcheck! Starting leader election here...")
+				color.Magenta("Error from ping healthcheck! Starting leader election here...")
 				// TODO: Performing Leader Election
 			}
 
@@ -139,7 +134,13 @@ func ping(server *ensemble.Server, currentPort string) (string, error) {
 			if err != nil {
 				color.Red("Error sending ping:")
 				log.Println(err)
-				return v, err
+
+				errorData := models.HealthCheckError{
+					Error:     err,
+					ErrorPort: v,
+				}
+				server.Rp.Zab.ErrorLeaderChan <- errorData
+				continue
 			}
 
 			// REPLY
