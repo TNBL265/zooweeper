@@ -7,7 +7,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -16,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/fatih/color"
 	ztree "github.com/tnbl265/zooweeper/database"
 	"github.com/tnbl265/zooweeper/database/handlers"
 	"github.com/tnbl265/zooweeper/database/models"
@@ -106,7 +106,7 @@ func (ab *AtomicBroadcast) Ping(portStr string) http.HandlerFunc {
 			ab.errorJSON(w, err, http.StatusBadRequest)
 			return
 		}
-		fmt.Printf("Received Healthcheck from Port:%s , Message:%s \n", requestPayload.PortNumber, requestPayload.Message)
+		color.Magenta("Received Healthcheck from Port:%s , Message:%s \n", requestPayload.PortNumber, requestPayload.Message)
 
 		payload := models.HealthCheck{
 			Message:    "pong",
