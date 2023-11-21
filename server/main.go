@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fatih/color"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/tnbl265/zooweeper/database/models"
 	ensemble "github.com/tnbl265/zooweeper/ensemble"
@@ -103,13 +104,14 @@ func ping(server *ensemble.Server, currentPort string) error {
 			req.Header.Add("Accept", "application/json")
 			req.Header.Add("Content-Type", "application/json")
 
-			fmt.Printf("Sending Ping to Port: %s\n", v)
+			color.Blue("Sending Ping to Port: %s", v)
 
 			// CONNECTION
 			resp, err := client.Do(req)
 			time.Sleep(time.Second * time.Duration(2)) // Arbitruary wait timer to simulate response time.
 			if err != nil {
-				log.Println("Error sending ping:", err)
+				color.Red("Error sending ping:")
+				log.Println(err)
 				continue // TODO: server is down, to perform leader election.
 			}
 
@@ -129,18 +131,17 @@ func ping(server *ensemble.Server, currentPort string) error {
 
 			// Status Code of Pong
 			statusCode := resp.StatusCode
-			fmt.Printf("Status Code received: %d\n", statusCode)
+			color.Green("Status Code received: %d\n", statusCode)
 
 			// Port number
-			fmt.Printf("Pong return from Server Port Number: %s \n", responseObject.PortNumber)
+			color.Green("Pong return from Server Port Number: %s \n", responseObject.PortNumber)
 
 			// Elapsed Time
 			endTime := time.Now()
 			elapsedTime := endTime.Sub(startTime)
-			fmt.Printf("Time taken to get this Pong return: %s\n", elapsedTime)
-
-			fmt.Printf("===================\n")
+			color.Green("Time taken to get this Pong return: %s\n", elapsedTime)
 		}
+		fmt.Printf("===================\n")
 	}
 }
 
