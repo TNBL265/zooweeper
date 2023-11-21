@@ -18,6 +18,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/tnbl265/zooweeper/database/models"
 	ensemble "github.com/tnbl265/zooweeper/ensemble"
+	zooweeper "github.com/tnbl265/zooweeper/zab"
 )
 
 func main() {
@@ -57,11 +58,17 @@ func main() {
 	}(server.Rp.Zab.ZTree.Connection())
 
 	var err error
-
+	myAB := &AtomicBroadcastCopy{AtomicBroadcast: server.Rp.Zab}
+	go myAB.listenForLeaderElection(port, leader)
 	go func() {
-		err = ping(server, portStr)
+		errPort, err := ping(server, portStr)
 		if err != nil {
-			fmt.Println("Ping error:", err)
+			errorData := models.HealthCheckError{
+				Error:     err,
+				ErrorPort: errPort,
+			}
+			server.Rp.Zab.ErrorLeaderChan <- errorData
+
 		} else {
 			fmt.Println("Ping successful")
 		}
@@ -73,9 +80,29 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 }
 
-func ping(server *ensemble.Server, currentPort string) error {
+type AtomicBroadcastCopy struct {
+	zooweeper.AtomicBroadcast // Embedding the type from the external package
+}
+
+func (ab *AtomicBroadcastCopy) listenForLeaderElection(port int, leader int) {
+	for {
+		select {
+		case errorData := <-ab.ErrorLeaderChan:
+			errorPortNumber, _ := strconv.Atoi(errorData.ErrorPort)
+			if errorPortNumber == leader {
+				color.Blue("Error from ping healthcheck! Starting leader election here...")
+				// TODO: Performing Leader Election
+			}
+
+		}
+	}
+
+}
+
+func ping(server *ensemble.Server, currentPort string) (string, error) {
 	for {
 		time.Sleep(time.Second * time.Duration(2))
 		// start timer here
@@ -99,7 +126,7 @@ func ping(server *ensemble.Server, currentPort string) error {
 			req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 			if err != nil {
 				log.Println(err)
-				return err
+				continue
 			}
 			req.Header.Add("Accept", "application/json")
 			req.Header.Add("Content-Type", "application/json")
@@ -112,7 +139,7 @@ func ping(server *ensemble.Server, currentPort string) error {
 			if err != nil {
 				color.Red("Error sending ping:")
 				log.Println(err)
-				continue // TODO: server is down, to perform leader election.
+				return v, err
 			}
 
 			// REPLY
