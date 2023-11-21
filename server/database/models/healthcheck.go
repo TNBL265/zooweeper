@@ -9,3 +9,11 @@ type HealthCheckError struct {
 	Error     error
 	ErrorPort string
 }
+
+type ElectLeaderRequest struct {
+	IncomingPort string `json:"port"`
+}
+
+type ElectLeaderResponse struct {
+	IsSuccess string `json:"isSuccess"`
+}

@@ -60,7 +60,7 @@ func main() {
 
 	var err error
 	myAB := &AtomicBroadcastCopy{AtomicBroadcast: server.Rp.Zab}
-	go myAB.listenForLeaderElection(port, leader)
+	go myAB.listenForLeaderElection(server, port, leader, allServers)
 	go func() {
 		_, err := ping(server, portStr)
 		if err != nil {
@@ -83,19 +83,67 @@ type AtomicBroadcastCopy struct {
 	zooweeper.AtomicBroadcast // Embedding the type from the external package
 }
 
-func (ab *AtomicBroadcastCopy) listenForLeaderElection(port int, leader int) {
+func (ab *AtomicBroadcastCopy) listenForLeaderElection(server *ensemble.Server, port int, leader int, allServers []int) {
 	for {
 		select {
 		case errorData := <-ab.ErrorLeaderChan:
 			errorPortNumber, _ := strconv.Atoi(errorData.ErrorPort)
 			if errorPortNumber == leader {
 				color.Magenta("Error from ping healthcheck! Starting leader election here...")
-				// TODO: Performing Leader Election
+				startLeaderElection(server, port, allServers)
 			}
 
 		}
 	}
 
+}
+
+func startLeaderElection(server *ensemble.Server, currentPort int, allServers []int) {
+	for _, outgoingPort := range allServers {
+
+		if outgoingPort < currentPort || outgoingPort == currentPort {
+			continue
+		}
+
+		//make a request
+		client := &http.Client{}
+		portURL := fmt.Sprintf("%d", outgoingPort)
+
+		url := fmt.Sprintf(server.Rp.Zab.BaseURL + ":" + portURL + "/electLeader")
+		var electMessage models.ElectLeaderRequest = models.ElectLeaderRequest{
+			IncomingPort: fmt.Sprintf("%d", currentPort),
+		}
+		jsonData, _ := json.Marshal(electMessage)
+
+		req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		req.Header.Add("Accept", "application/json")
+		req.Header.Add("Content-Type", "application/json")
+
+		resp, err := client.Do(req)
+		if err != nil {
+			continue
+		}
+
+		defer resp.Body.Close()
+		resBody, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		var responseObject models.ElectLeaderResponse
+		err = json.Unmarshal(resBody, &responseObject)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		fmt.Printf("RESPONSE:::::: %s\n", responseObject.IsSuccess)
+
+	}
 }
 
 func ping(server *ensemble.Server, currentPort string) (string, error) {
