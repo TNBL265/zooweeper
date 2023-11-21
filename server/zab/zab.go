@@ -43,6 +43,8 @@ type AtomicBroadcast struct {
 	proposalMu    sync.Mutex
 
 	pq PriorityQueue
+
+	ErrorLeaderChan chan models.HealthCheckError
 }
 
 func (ab *AtomicBroadcast) AckCounter() int {
@@ -90,6 +92,8 @@ func NewAtomicBroadcast(dbPath string) *AtomicBroadcast {
 	ab.Proposal.ab = ab
 
 	ab.proposalState = COMMITTED
+
+	ab.ErrorLeaderChan = make(chan models.HealthCheckError)
 
 	ab.pq = make(PriorityQueue, 0)
 	heap.Init(&ab.pq)
