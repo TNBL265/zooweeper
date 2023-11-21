@@ -29,7 +29,7 @@ func main() {
 	port, _ := strconv.Atoi(portStr)
 
 	var state ensemble.ServerState
-	leader := 8080
+	leader := 8082
 	allServers := []int{8080, 8081, 8082}
 
 	var dbPath string
