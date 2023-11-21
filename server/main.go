@@ -148,8 +148,38 @@ func startLeaderElection(server *ensemble.Server, currentPort int, allServers []
 		}
 
 	}
-
+	if !hasFailedElection {
+		declareLeaderRequest(server, fmt.Sprintf("%d", currentPort), allServers)
+	}
 	color.Red("results is %t", hasFailedElection)
+}
+
+func declareLeaderRequest(server *ensemble.Server, portStr string, allServers []int) {
+	for _, outgoingPort := range allServers {
+		//make a request
+		client := &http.Client{}
+		portURL := fmt.Sprintf("%d", outgoingPort)
+
+		url := fmt.Sprintf(server.Rp.Zab.BaseURL + ":" + portURL + "/declareLeaderReceive")
+		var electMessage models.DeclareLeaderRequest = models.DeclareLeaderRequest{
+			IncomingPort: portStr,
+		}
+		jsonData, _ := json.Marshal(electMessage)
+
+		req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		req.Header.Add("Accept", "application/json")
+		req.Header.Add("Content-Type", "application/json")
+
+		resp, err := client.Do(req)
+		if err != nil {
+			continue
+		}
+		defer resp.Body.Close()
+	}
 }
 
 func ping(server *ensemble.Server, currentPort string) (string, error) {

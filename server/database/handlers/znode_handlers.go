@@ -171,3 +171,28 @@ func (zt *ZTree) GetClients() ([]string, error) {
 
 	return servers, nil
 }
+
+func (zt *ZTree) UpdateFirstLeader(leader string) error {
+	sqlStatement := `
+		UPDATE ZNode 
+		SET Leader = $1 
+	`
+	result, err := zt.DB.Exec(sqlStatement, leader)
+	if err != nil {
+		log.Println("Error updating Leader column:", err)
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		log.Println("Error getting rows affected:", err)
+		return err
+	}
+
+	if rowsAffected == 0 {
+		log.Println("No rows were updated. The table might be empty.")
+		// You can choose to handle this as an error or as a special case.
+	}
+
+	return nil
+}
