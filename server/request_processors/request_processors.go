@@ -18,14 +18,15 @@ func NewRequestProcessor(dbPath string) *RequestProcessor {
 	}
 }
 
-func (rp *RequestProcessor) Routes() http.Handler {
+func (rp *RequestProcessor) Routes(portStr string) http.Handler {
 	mux := chi.NewRouter()
 	mux.Use(middleware.Recoverer)
 	mux.Use(rp.Zab.EnableCORS)
+	mux.Use(middleware.WithValue("portStr", portStr))
 
 	// Read Request
 	mux.Group(func(r chi.Router) {
-		r.Get("/", rp.Zab.Ping)
+		r.Post("/", rp.Zab.Ping(portStr))
 		r.Get("/metadata", rp.Zab.Read.GetAllMetadata)
 		r.Post("/scoreExists/{leader}", rp.Zab.Read.DoesScoreExist)
 	})

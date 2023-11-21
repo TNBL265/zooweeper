@@ -1,16 +1,22 @@
 package main
 
 import (
+	"bytes"
 	"database/sql"
+	"encoding/json"
 	"fmt"
-	_ "github.com/mattn/go-sqlite3"
-	"github.com/tnbl265/zooweeper/database/models"
-	ensemble "github.com/tnbl265/zooweeper/ensemble"
+
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
+	"time"
+
+	_ "github.com/mattn/go-sqlite3"
+	"github.com/tnbl265/zooweeper/database/models"
+	ensemble "github.com/tnbl265/zooweeper/ensemble"
 )
 
 func main() {
@@ -49,12 +55,92 @@ func main() {
 		}
 	}(server.Rp.Zab.ZTree.Connection())
 
+	var err error
+
+	go func() {
+		err = ping(server, portStr)
+		if err != nil {
+			fmt.Println("Ping error:", err)
+		} else {
+			fmt.Println("Ping successful")
+		}
+	}()
 	// I
 	initZNode(server, port, leader, allServers)
 
-	err := http.ListenAndServe(fmt.Sprintf(":"+portStr), server.Rp.Routes())
+	err = http.ListenAndServe(fmt.Sprintf(":"+portStr), server.Rp.Routes(portStr))
 	if err != nil {
 		log.Fatal(err)
+	}
+}
+
+func ping(server *ensemble.Server, currentPort string) error {
+	for {
+		time.Sleep(time.Second * time.Duration(2))
+		// start timer here
+		startTime := time.Now()
+
+		var healthCheck models.HealthCheck = models.HealthCheck{
+			Message:    "ping!",
+			PortNumber: currentPort,
+		}
+		jsonData, _ := json.Marshal(healthCheck)
+
+		metadata, _ := server.Rp.Zab.ZTree.GetLocalMetadata()
+		servers := strings.Split(metadata.Servers, ",")
+		for _, v := range servers {
+			if currentPort == v {
+				continue
+			}
+			client := &http.Client{}
+			url := fmt.Sprintf(server.Rp.Zab.BaseURL + ":" + v + "/")
+
+			req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+			if err != nil {
+				log.Println(err)
+				return err
+			}
+			req.Header.Add("Accept", "application/json")
+			req.Header.Add("Content-Type", "application/json")
+
+			fmt.Printf("Sending Ping to Port: %s\n", v)
+
+			// CONNECTION
+			resp, err := client.Do(req)
+			time.Sleep(time.Second * time.Duration(2)) // Arbitruary wait timer to simulate response time.
+			if err != nil {
+				log.Println("Error sending ping:", err)
+				continue // TODO: server is down, to perform leader election.
+			}
+
+			// REPLY
+			defer resp.Body.Close()
+			resBody, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+			var responseObject models.HealthCheck
+			err = json.Unmarshal(resBody, &responseObject)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+
+			// Status Code of Pong
+			statusCode := resp.StatusCode
+			fmt.Printf("Status Code received: %d\n", statusCode)
+
+			// Port number
+			fmt.Printf("Pong return from Server Port Number: %s \n", responseObject.PortNumber)
+
+			// Elapsed Time
+			endTime := time.Now()
+			elapsedTime := endTime.Sub(startTime)
+			fmt.Printf("Time taken to get this Pong return: %s\n", elapsedTime)
+
+			fmt.Printf("===================\n")
+		}
 	}
 }
 

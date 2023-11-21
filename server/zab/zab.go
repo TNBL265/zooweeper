@@ -6,16 +6,19 @@ import (
 	"container/heap"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
-	ztree "github.com/tnbl265/zooweeper/database"
-	"github.com/tnbl265/zooweeper/database/handlers"
-	"github.com/tnbl265/zooweeper/database/models"
+	"io"
 	"log"
 	"net/http"
 	"os"
 	"strings"
 	"sync"
 	"time"
+
+	ztree "github.com/tnbl265/zooweeper/database"
+	"github.com/tnbl265/zooweeper/database/handlers"
+	"github.com/tnbl265/zooweeper/database/models"
 )
 
 type ProposalState string
@@ -95,8 +98,23 @@ func NewAtomicBroadcast(dbPath string) *AtomicBroadcast {
 	return ab
 }
 
-func (ab *AtomicBroadcast) Ping(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, "pong")
+func (ab *AtomicBroadcast) Ping(portStr string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var requestPayload models.HealthCheck
+		err := ab.readJSON(w, r, &requestPayload)
+		if err != nil {
+			ab.errorJSON(w, err, http.StatusBadRequest)
+			return
+		}
+		fmt.Printf("Received Healthcheck from Port:%s , Message:%s \n", requestPayload.PortNumber, requestPayload.Message)
+
+		payload := models.HealthCheck{
+			Message:    "pong",
+			PortNumber: portStr,
+		}
+
+		_ = ab.writeJSON(w, http.StatusOK, payload)
+	}
 }
 
 func (ab *AtomicBroadcast) OpenDB(datasource string) (*sql.DB, error) {
@@ -127,6 +145,27 @@ func (ab *AtomicBroadcast) CreateMetadata(w http.ResponseWriter, r *http.Request
 		GameResults: requestPayload.GameResults,
 	}
 	return data
+}
+
+func (ab *AtomicBroadcast) readJSON2(w http.ResponseWriter, r *http.Request, data interface{}) error {
+	maxBytes := 1024 * 1024 // one megabyte
+	r.Body = http.MaxBytesReader(w, r.Body, int64(maxBytes))
+
+	dec := json.NewDecoder(r.Body)
+
+	dec.DisallowUnknownFields()
+
+	err := dec.Decode(data)
+	if err != nil {
+		return err
+	}
+
+	err = dec.Decode(&struct{}{})
+	if err != io.EOF {
+		return errors.New("body must only contain a single JSON value")
+	}
+
+	return nil
 }
 
 func (ab *AtomicBroadcast) forwardRequestToLeader(r *http.Request) (*http.Response, error) {
