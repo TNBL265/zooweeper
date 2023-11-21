@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -98,6 +99,7 @@ func (ab *AtomicBroadcastCopy) listenForLeaderElection(port int, leader int) {
 }
 
 func ping(server *ensemble.Server, currentPort string) (string, error) {
+	const TIMEOUT = 2 // Arbitruary wait timer to simulate response time arrival
 	for {
 		time.Sleep(time.Second * time.Duration(2))
 		// start timer here
@@ -128,10 +130,19 @@ func ping(server *ensemble.Server, currentPort string) (string, error) {
 
 			color.Blue("Sending Ping to Port: %s", v)
 
+			ctx, cancel := context.WithTimeout(context.Background(), TIMEOUT*time.Second)
+			defer cancel()
+
+			req = req.WithContext(ctx)
+
 			// CONNECTION
 			resp, err := client.Do(req)
-			time.Sleep(time.Second * time.Duration(2)) // Arbitruary wait timer to simulate response time.
-			if err != nil {
+			if resp == nil && err != nil {
+				if ctxErr := ctx.Err(); ctxErr == context.DeadlineExceeded {
+					color.Red("Timeout Occurred!")
+				}
+			}
+			if err != nil || resp == nil {
 				color.Red("Error sending ping:")
 				log.Println(err)
 
