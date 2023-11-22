@@ -90,96 +90,35 @@ func (ab *AtomicBroadcastCopy) listenForLeaderElection(server *ensemble.Server, 
 			errorPortNumber, _ := strconv.Atoi(errorData.ErrorPort)
 			if errorPortNumber == leader {
 				color.Magenta("Error from ping healthcheck! Starting leader election here...")
-				startLeaderElection(server, port, allServers)
+				ab.startLeaderElection(server, port, allServers)
 			}
 
 		}
 	}
 
 }
+func (ab *AtomicBroadcastCopy) startLeaderElection(server *ensemble.Server, currentPort int, allServers []int) {
 
-func startLeaderElection(server *ensemble.Server, currentPort int, allServers []int) {
-	hasFailedElection := false
-	for _, outgoingPort := range allServers {
+	client := &http.Client{}
+	portURL := fmt.Sprintf("%d", currentPort)
 
-		if outgoingPort < currentPort || outgoingPort == currentPort {
-			continue
-		}
-
-		//make a request
-		client := &http.Client{}
-		portURL := fmt.Sprintf("%d", outgoingPort)
-
-		url := fmt.Sprintf(server.Rp.Zab.BaseURL + ":" + portURL + "/electLeader")
-		var electMessage models.ElectLeaderRequest = models.ElectLeaderRequest{
-			IncomingPort: fmt.Sprintf("%d", currentPort),
-		}
-		jsonData, _ := json.Marshal(electMessage)
-
-		req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-		req.Header.Add("Accept", "application/json")
-		req.Header.Add("Content-Type", "application/json")
-
-		resp, err := client.Do(req)
-		if err != nil {
-			continue
-		}
-
-		defer resp.Body.Close()
-		resBody, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-		var responseObject models.ElectLeaderResponse
-		err = json.Unmarshal(resBody, &responseObject)
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-
-		responseBool, _ := strconv.ParseBool(responseObject.IsSuccess)
-		if !responseBool {
-			hasFailedElection = true
-		}
-
+	url := fmt.Sprintf(ab.BaseURL + ":" + portURL + "/electLeader")
+	var electMessage models.ElectLeaderRequest = models.ElectLeaderRequest{
+		IncomingPort: fmt.Sprintf("%d", currentPort),
 	}
-	if !hasFailedElection {
-		declareLeaderRequest(server, fmt.Sprintf("%d", currentPort), allServers)
+	jsonData, _ := json.Marshal(electMessage)
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		log.Println(err)
 	}
-	color.Red("results is %t", hasFailedElection)
-}
+	req.Header.Add("Accept", "application/json")
+	req.Header.Add("Content-Type", "application/json")
 
-func declareLeaderRequest(server *ensemble.Server, portStr string, allServers []int) {
-	for _, outgoingPort := range allServers {
-		//make a request
-		client := &http.Client{}
-		portURL := fmt.Sprintf("%d", outgoingPort)
-
-		url := fmt.Sprintf(server.Rp.Zab.BaseURL + ":" + portURL + "/declareLeaderReceive")
-		var electMessage models.DeclareLeaderRequest = models.DeclareLeaderRequest{
-			IncomingPort: portStr,
-		}
-		jsonData, _ := json.Marshal(electMessage)
-
-		req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-		req.Header.Add("Accept", "application/json")
-		req.Header.Add("Content-Type", "application/json")
-
-		resp, err := client.Do(req)
-		if err != nil {
-			continue
-		}
-		defer resp.Body.Close()
+	resp, err := client.Do(req)
+	if err != nil {
 	}
+	defer resp.Body.Close()
 }
 
 func ping(server *ensemble.Server, currentPort string) (string, error) {
