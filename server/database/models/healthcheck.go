@@ -8,6 +8,7 @@ type HealthCheck struct {
 type HealthCheckError struct {
 	Error     error
 	ErrorPort string
+	IsWakeup  bool
 }
 
 type ElectLeaderRequest struct {
