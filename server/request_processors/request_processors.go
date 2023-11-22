@@ -27,7 +27,7 @@ func (rp *RequestProcessor) Routes(portStr string) http.Handler {
 	// Read Request
 	mux.Group(func(r chi.Router) {
 		r.Post("/", rp.Zab.Ping(portStr))
-		r.Post("/electLeader", rp.Zab.ElectLeader(portStr))
+		r.Post("/electLeader", rp.Zab.SelfElectLeaderRequest(portStr))
 		r.Post("/declareLeaderReceive", rp.Zab.DeclareLeaderReceive(portStr))
 		r.Get("/metadata", rp.Zab.Read.GetAllMetadata)
 		r.Post("/scoreExists/{leader}", rp.Zab.Read.DoesScoreExist)

@@ -125,7 +125,8 @@ func (ab *AtomicBroadcast) Ping(portStr string) http.HandlerFunc {
 		_ = ab.writeJSON(w, http.StatusOK, payload)
 	}
 }
-func (ab *AtomicBroadcast) ElectLeader(portStr string) http.HandlerFunc {
+
+func (ab *AtomicBroadcast) SelfElectLeaderRequest(portStr string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		hasFailedElection := false
 
@@ -145,15 +146,17 @@ func (ab *AtomicBroadcast) ElectLeader(portStr string) http.HandlerFunc {
 		}
 		metadata, _ := ab.ZTree.GetLocalMetadata()
 		allServers := strings.Split(metadata.Servers, ",")
+
+		// If it has a better node number than the incoming one, send a value updwards to all nodes higher than it.
 		if incomingPortNumber <= currentPortNumber {
-			//
+			// Send self elect message to all nodes that is higher than current node
 			for _, outgoingPort := range allServers {
 				outgoingPortNumber, _ := strconv.Atoi(outgoingPort)
 				if outgoingPortNumber < currentPortNumber || outgoingPortNumber == currentPortNumber {
 					continue
 				}
 
-				//make a request
+				// make a http request
 				client := &http.Client{}
 				portURL := fmt.Sprintf("%s", outgoingPort)
 
@@ -199,7 +202,7 @@ func (ab *AtomicBroadcast) ElectLeader(portStr string) http.HandlerFunc {
 					continue
 				}
 
-				fmt.Printf("RESPONSE:::::: %s\n", responseObject.IsSuccess)
+				// If higher node response, determine if election should fail.
 				responseBool, _ := strconv.ParseBool(responseObject.IsSuccess)
 				if !responseBool {
 					hasFailedElection = true
@@ -209,6 +212,8 @@ func (ab *AtomicBroadcast) ElectLeader(portStr string) http.HandlerFunc {
 
 		}
 		color.Red("results is %t", hasFailedElection)
+
+		// Declare itself leader to all other nodes if node succeeds
 		if !hasFailedElection {
 			ab.declareLeaderRequest(portStr, allServers)
 		}
@@ -216,6 +221,7 @@ func (ab *AtomicBroadcast) ElectLeader(portStr string) http.HandlerFunc {
 	}
 }
 
+// Send request to all other nodes that outgoing port is a leader.
 func (ab *AtomicBroadcast) declareLeaderRequest(portStr string, allServers []string) {
 	for _, outgoingPort := range allServers {
 		//make a request
@@ -244,6 +250,7 @@ func (ab *AtomicBroadcast) declareLeaderRequest(portStr string, allServers []str
 	}
 }
 
+// Receive response to all other nodes that incoming port is a leader.
 func (ab *AtomicBroadcast) DeclareLeaderReceive(portStr string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		//send information to all servers
