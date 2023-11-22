@@ -145,7 +145,7 @@ func (ab *AtomicBroadcast) ElectLeader(portStr string) http.HandlerFunc {
 		}
 		metadata, _ := ab.ZTree.GetLocalMetadata()
 		allServers := strings.Split(metadata.Servers, ",")
-		if incomingPortNumber < currentPortNumber {
+		if incomingPortNumber <= currentPortNumber {
 			//
 			for _, outgoingPort := range allServers {
 				outgoingPortNumber, _ := strconv.Atoi(outgoingPort)
