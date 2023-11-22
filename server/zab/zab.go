@@ -127,6 +127,7 @@ func (ab *AtomicBroadcast) Ping(portStr string) http.HandlerFunc {
 }
 
 func (ab *AtomicBroadcast) SelfElectLeaderRequest(portStr string) http.HandlerFunc {
+	const REQUEST_TIMEOUT = 10 // Arbitruary wait timer to simulate response time arrival
 	return func(w http.ResponseWriter, r *http.Request) {
 		hasFailedElection := false
 
@@ -174,18 +175,18 @@ func (ab *AtomicBroadcast) SelfElectLeaderRequest(portStr string) http.HandlerFu
 				req.Header.Add("Accept", "application/json")
 				req.Header.Add("Content-Type", "application/json")
 
-				ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+				ctx, cancel := context.WithTimeout(context.Background(), REQUEST_TIMEOUT*time.Second)
 				defer cancel()
 
 				req = req.WithContext(ctx)
-				color.Red(url)
 				// CONNECTION
 				resp, err := client.Do(req)
 				if err != nil || resp == nil {
-
+					log.Println("Timeout issue!")
+					log.Println(err)
 					continue
-				}
-				if err != nil {
+				} else if err != nil {
+					log.Println(err)
 					continue
 				}
 
@@ -211,7 +212,11 @@ func (ab *AtomicBroadcast) SelfElectLeaderRequest(portStr string) http.HandlerFu
 			}
 
 		}
-		color.Red("results is %t", hasFailedElection)
+		if !hasFailedElection {
+			color.Green("Port %s has won election", portStr)
+		} else {
+			color.Red("Port %s has lost election", portStr)
+		}
 
 		// Declare itself leader to all other nodes if node succeeds
 		if !hasFailedElection {
