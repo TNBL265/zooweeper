@@ -58,6 +58,7 @@ func main() {
 		}
 	}(server.Rp.Zab.ZTree.Connection())
 
+	// Listen for errors
 	var err error
 	myAB := &AtomicBroadcastCopy{AtomicBroadcast: server.Rp.Zab}
 	go myAB.listenForLeaderElection(server, port, leader, allServers)
@@ -79,52 +80,36 @@ func main() {
 
 }
 
-type AtomicBroadcastCopy struct {
-	zooweeper.AtomicBroadcast // Embedding the type from the external package
+// initZNode insert first Znode to self-identify
+func initZNode(server *ensemble.Server, port, leader int, allServers []int) {
+	existFirstNode, _ := server.Rp.Zab.ZTree.NodeIdExists(1)
+	if existFirstNode {
+		return
+	}
+	var result []string
+	for _, server := range allServers {
+		result = append(result, strconv.Itoa(server))
+	}
+
+	allServersStr := strings.Join(result, ",")
+
+	metadata := models.Metadata{
+		NodeIp:  strconv.Itoa(port),
+		Leader:  strconv.Itoa(leader),
+		Servers: allServersStr,
+	}
+	server.Rp.Zab.ZTree.InsertMetadata(metadata, 0)
 }
 
-func (ab *AtomicBroadcastCopy) listenForLeaderElection(server *ensemble.Server, port int, leader int, allServers []int) {
-	for {
-		select {
-		case errorData := <-ab.ErrorLeaderChan:
-			errorPortNumber, _ := strconv.Atoi(errorData.ErrorPort)
-			if errorPortNumber == leader {
-				color.Magenta("Error from ping healthcheck! Starting leader election here...")
-				ab.startLeaderElection(server, port, allServers)
-			}
-
-		}
-	}
-
-}
-func (ab *AtomicBroadcastCopy) startLeaderElection(server *ensemble.Server, currentPort int, allServers []int) {
-
-	client := &http.Client{}
-	portURL := fmt.Sprintf("%d", currentPort)
-
-	url := fmt.Sprintf(ab.BaseURL + ":" + portURL + "/electLeader")
-	var electMessage models.ElectLeaderRequest = models.ElectLeaderRequest{
-		IncomingPort: fmt.Sprintf("%d", currentPort),
-	}
-	jsonData, _ := json.Marshal(electMessage)
-
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
-	if err != nil {
-		log.Println(err)
-	}
-	req.Header.Add("Accept", "application/json")
-	req.Header.Add("Content-Type", "application/json")
-
-	resp, err := client.Do(req)
-	if err != nil {
-	}
-	defer resp.Body.Close()
-}
-
+// This function pings all other servers every arbitruary time
+// If the ping response takes more than an arbitruary time, or the connection is refused from the other server,
+// then call the Error Channel with error information.
 func ping(server *ensemble.Server, currentPort string) (string, error) {
-	const TIMEOUT = 2 // Arbitruary wait timer to simulate response time arrival
+	const PING_TIMEOUT = 10   // Arbitruary wait timer to simulate response time arrival
+	const REQUEST_TIMEOUT = 2 // Arbitruary wait timer to simulate response time arrival
 	for {
-		time.Sleep(time.Second * time.Duration(2))
+
+		time.Sleep(time.Second * time.Duration(PING_TIMEOUT))
 		// start timer here
 		startTime := time.Now()
 
@@ -153,7 +138,7 @@ func ping(server *ensemble.Server, currentPort string) (string, error) {
 
 			color.Blue("Sending Ping to Port: %s", v)
 
-			ctx, cancel := context.WithTimeout(context.Background(), TIMEOUT*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), REQUEST_TIMEOUT*time.Second)
 			defer cancel()
 
 			req = req.WithContext(ctx)
@@ -207,23 +192,44 @@ func ping(server *ensemble.Server, currentPort string) (string, error) {
 	}
 }
 
-// initZNode insert first Znode to self-identify
-func initZNode(server *ensemble.Server, port, leader int, allServers []int) {
-	existFirstNode, _ := server.Rp.Zab.ZTree.NodeIdExists(1)
-	if existFirstNode {
-		return
-	}
-	var result []string
-	for _, server := range allServers {
-		result = append(result, strconv.Itoa(server))
-	}
+type AtomicBroadcastCopy struct {
+	zooweeper.AtomicBroadcast // Embedding the type from the external package
+}
 
-	allServersStr := strings.Join(result, ",")
-
-	metadata := models.Metadata{
-		NodeIp:  strconv.Itoa(port),
-		Leader:  strconv.Itoa(leader),
-		Servers: allServersStr,
+func (ab *AtomicBroadcastCopy) listenForLeaderElection(server *ensemble.Server, port int, leader int, allServers []int) {
+	for {
+		select {
+		case errorData := <-ab.ErrorLeaderChan:
+			errorPortNumber, _ := strconv.Atoi(errorData.ErrorPort)
+			if errorPortNumber == leader {
+				color.Magenta("Error from ping healthcheck! Starting leader election here...")
+				ab.startLeaderElection(server, port, allServers)
+			}
+		}
 	}
-	server.Rp.Zab.ZTree.InsertMetadata(metadata, 0)
+}
+
+// Starts the leader election by calling its own server handler with information of the port information.
+func (ab *AtomicBroadcastCopy) startLeaderElection(server *ensemble.Server, currentPort int, allServers []int) {
+
+	client := &http.Client{}
+	portURL := fmt.Sprintf("%d", currentPort)
+
+	url := fmt.Sprintf(ab.BaseURL + ":" + portURL + "/electLeader")
+	var electMessage models.ElectLeaderRequest = models.ElectLeaderRequest{
+		IncomingPort: fmt.Sprintf("%d", currentPort),
+	}
+	jsonData, _ := json.Marshal(electMessage)
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		log.Println(err)
+	}
+	req.Header.Add("Accept", "application/json")
+	req.Header.Add("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+	}
+	defer resp.Body.Close()
 }
