@@ -3,19 +3,27 @@
 package zooweeper
 
 import (
+	"bytes"
 	"container/heap"
+	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
-	ztree "github.com/tnbl265/zooweeper/database"
-	"github.com/tnbl265/zooweeper/database/handlers"
-	"github.com/tnbl265/zooweeper/database/models"
+	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/fatih/color"
+	ztree "github.com/tnbl265/zooweeper/database"
+	"github.com/tnbl265/zooweeper/database/handlers"
+	"github.com/tnbl265/zooweeper/database/models"
 )
 
 type ProposalState string
@@ -40,6 +48,8 @@ type AtomicBroadcast struct {
 	proposalMu    sync.Mutex
 
 	pq PriorityQueue
+
+	ErrorLeaderChan chan models.HealthCheckError
 }
 
 func (ab *AtomicBroadcast) AckCounter() int {
@@ -88,6 +98,8 @@ func NewAtomicBroadcast(dbPath string) *AtomicBroadcast {
 
 	ab.proposalState = COMMITTED
 
+	ab.ErrorLeaderChan = make(chan models.HealthCheckError)
+
 	ab.pq = make(PriorityQueue, 0)
 	heap.Init(&ab.pq)
 
@@ -95,8 +107,168 @@ func NewAtomicBroadcast(dbPath string) *AtomicBroadcast {
 	return ab
 }
 
-func (ab *AtomicBroadcast) Ping(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, "pong")
+func (ab *AtomicBroadcast) Ping(portStr string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var requestPayload models.HealthCheck
+		err := ab.readJSON(w, r, &requestPayload)
+		if err != nil {
+			ab.errorJSON(w, err, http.StatusBadRequest)
+			return
+		}
+		color.Magenta("Received Healthcheck from Port:%s , Message:%s \n", requestPayload.PortNumber, requestPayload.Message)
+
+		payload := models.HealthCheck{
+			Message:    "pong",
+			PortNumber: portStr,
+		}
+
+		_ = ab.writeJSON(w, http.StatusOK, payload)
+	}
+}
+
+func (ab *AtomicBroadcast) SelfElectLeaderRequest(portStr string) http.HandlerFunc {
+	const REQUEST_TIMEOUT = 10 // Arbitruary wait timer to simulate response time arrival
+	return func(w http.ResponseWriter, r *http.Request) {
+		hasFailedElection := false
+
+		var requestPayload models.ElectLeaderRequest
+		err := ab.readJSON(w, r, &requestPayload)
+		if err != nil {
+			ab.errorJSON(w, err, http.StatusBadRequest)
+			return
+		}
+		color.Magenta("Received election message from Port:%s \n", requestPayload.IncomingPort)
+
+		incomingPortNumber, _ := strconv.Atoi(requestPayload.IncomingPort)
+		currentPortNumber, _ := strconv.Atoi(portStr)
+
+		payload := models.ElectLeaderResponse{
+			IsSuccess: strconv.FormatBool(incomingPortNumber > currentPortNumber),
+		}
+		metadata, _ := ab.ZTree.GetLocalMetadata()
+		allServers := strings.Split(metadata.Servers, ",")
+
+		// If it has a better node number than the incoming one, send a value updwards to all nodes higher than it.
+		if incomingPortNumber <= currentPortNumber {
+			// Send self elect message to all nodes that is higher than current node
+			for _, outgoingPort := range allServers {
+				outgoingPortNumber, _ := strconv.Atoi(outgoingPort)
+				if outgoingPortNumber < currentPortNumber || outgoingPortNumber == currentPortNumber {
+					continue
+				}
+
+				// make a http request
+				client := &http.Client{}
+				portURL := fmt.Sprintf("%s", outgoingPort)
+
+				url := fmt.Sprintf(ab.BaseURL + ":" + portURL + "/electLeader")
+				var electMessage models.ElectLeaderRequest = models.ElectLeaderRequest{
+					IncomingPort: fmt.Sprintf("%d", currentPortNumber),
+				}
+				jsonData, _ := json.Marshal(electMessage)
+
+				req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+				req.Header.Add("Accept", "application/json")
+				req.Header.Add("Content-Type", "application/json")
+
+				ctx, cancel := context.WithTimeout(context.Background(), REQUEST_TIMEOUT*time.Second)
+				defer cancel()
+
+				req = req.WithContext(ctx)
+				// CONNECTION
+				resp, err := client.Do(req)
+				if err != nil || resp == nil {
+					log.Println("Timeout issue!")
+					log.Println(err)
+					continue
+				} else if err != nil {
+					log.Println(err)
+					continue
+				}
+
+				defer resp.Body.Close()
+				resBody, err := ioutil.ReadAll(resp.Body)
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+				var responseObject models.ElectLeaderResponse
+				err = json.Unmarshal(resBody, &responseObject)
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+
+				// If higher node response, determine if election should fail.
+				responseBool, _ := strconv.ParseBool(responseObject.IsSuccess)
+				if !responseBool {
+					hasFailedElection = true
+				}
+
+			}
+
+		}
+		if !hasFailedElection {
+			color.Green("Port %s has won election", portStr)
+		} else {
+			color.Red("Port %s has lost election", portStr)
+		}
+
+		// Declare itself leader to all other nodes if node succeeds
+		if !hasFailedElection {
+			ab.declareLeaderRequest(portStr, allServers)
+		}
+		_ = ab.writeJSON(w, http.StatusOK, payload)
+	}
+}
+
+// Send request to all other nodes that outgoing port is a leader.
+func (ab *AtomicBroadcast) declareLeaderRequest(portStr string, allServers []string) {
+	for _, outgoingPort := range allServers {
+		//make a request
+		client := &http.Client{}
+		portURL := fmt.Sprintf("%s", outgoingPort)
+
+		url := fmt.Sprintf(ab.BaseURL + ":" + portURL + "/declareLeaderReceive")
+		var electMessage models.DeclareLeaderRequest = models.DeclareLeaderRequest{
+			IncomingPort: portStr,
+		}
+		jsonData, _ := json.Marshal(electMessage)
+
+		req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		req.Header.Add("Accept", "application/json")
+		req.Header.Add("Content-Type", "application/json")
+
+		resp, err := client.Do(req)
+		if err != nil {
+			continue
+		}
+		defer resp.Body.Close()
+	}
+}
+
+// Receive response to all other nodes that incoming port is a leader.
+func (ab *AtomicBroadcast) DeclareLeaderReceive(portStr string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		//send information to all servers
+		var requestPayload models.DeclareLeaderRequest
+		err := ab.readJSON(w, r, &requestPayload)
+		if err != nil {
+			ab.errorJSON(w, err, http.StatusBadRequest)
+			return
+		}
+
+		color.Cyan("%s", requestPayload.IncomingPort)
+		ab.ZTree.UpdateFirstLeader(requestPayload.IncomingPort) //FIXME: use blong's version instead
+	}
 }
 
 func (ab *AtomicBroadcast) OpenDB(datasource string) (*sql.DB, error) {
@@ -127,6 +299,27 @@ func (ab *AtomicBroadcast) CreateMetadata(w http.ResponseWriter, r *http.Request
 		GameResults: requestPayload.GameResults,
 	}
 	return data
+}
+
+func (ab *AtomicBroadcast) readJSON2(w http.ResponseWriter, r *http.Request, data interface{}) error {
+	maxBytes := 1024 * 1024 // one megabyte
+	r.Body = http.MaxBytesReader(w, r.Body, int64(maxBytes))
+
+	dec := json.NewDecoder(r.Body)
+
+	dec.DisallowUnknownFields()
+
+	err := dec.Decode(data)
+	if err != nil {
+		return err
+	}
+
+	err = dec.Decode(&struct{}{})
+	if err != io.EOF {
+		return errors.New("body must only contain a single JSON value")
+	}
+
+	return nil
 }
 
 func (ab *AtomicBroadcast) forwardRequestToLeader(r *http.Request) (*http.Response, error) {
