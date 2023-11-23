@@ -20,4 +20,6 @@ type ZooWeeperDatabaseRepo interface {
 	AllMetadata() ([]*models.Metadata, error)
 	DeleteMetadata(Leader string) error
 	CheckMetadataExist(Leader string) (bool, error)
+
+	UpdateFirstLeader(Leader string) error
 }
