@@ -89,7 +89,7 @@ func (ab *AtomicBroadcast) errorJSON(w http.ResponseWriter, err error, status ..
 	return ab.writeJSON(w, statusCode, payload)
 }
 
-func (ab *AtomicBroadcast) makeExternalRequest(w http.ResponseWriter, incomingUrl string, method string, jsonData []byte) *http.Response {
+func (ab *AtomicBroadcast) makeExternalRequest(w http.ResponseWriter, incomingUrl string, method string, jsonData []byte) (*http.Response, error) {
 	client := &http.Client{}
 	url := fmt.Sprintf(incomingUrl)
 
@@ -97,6 +97,7 @@ func (ab *AtomicBroadcast) makeExternalRequest(w http.ResponseWriter, incomingUr
 	if err != nil {
 		log.Println("Error creating request:", err)
 		ab.errorJSON(w, err, http.StatusBadRequest)
+		return nil, err
 	}
 
 	req.Header.Add("Accept", "application/json")
@@ -108,8 +109,9 @@ func (ab *AtomicBroadcast) makeExternalRequest(w http.ResponseWriter, incomingUr
 	res, err := client.Do(req)
 	if err != nil {
 		log.Println("Error sending request:", err)
-		ab.errorJSON(w, err, http.StatusBadRequest)
+		//ab.errorJSON(w, err, http.StatusBadRequest)
+		return nil, err
 	}
 
-	return res
+	return res, nil
 }

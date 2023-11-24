@@ -28,6 +28,8 @@ import (
 
 type ProposalState string
 
+var err error
+
 const (
 	COMMITTED    ProposalState = "COMMITTED"
 	PROPOSED     ProposalState = "PROPOSED"
@@ -340,7 +342,11 @@ func (ab *AtomicBroadcast) startProposal(data models.Data) {
 		if port != zNode.NodeIp {
 			log.Println("Proposing to Follower:", port)
 			url := ab.BaseURL + ":" + port + "/proposeWrite"
-			_ = ab.makeExternalRequest(nil, url, "POST", jsonData)
+			_, err := ab.makeExternalRequest(nil, url, "POST", jsonData)
+			if err != nil {
+				log.Println("Error proposing to follower:", port, "Error:", err)
+				continue
+			}
 		}
 	}
 
@@ -348,8 +354,12 @@ func (ab *AtomicBroadcast) startProposal(data models.Data) {
 	for ab.ProposalState() != ACKNOWLEDGED {
 		time.Sleep(time.Second)
 	}
+
 	log.Println("Leader committing")
 	url := ab.BaseURL + ":" + zNode.NodeIp + "/writeMetadata"
-	_ = ab.makeExternalRequest(nil, url, "POST", jsonData)
+	_, err := ab.makeExternalRequest(nil, url, "POST", jsonData)
+	if err != nil {
+		log.Println("Error committing write metadata:", err)
+	}
 	ab.SetProposalState(COMMITTED)
 }
