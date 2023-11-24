@@ -54,18 +54,21 @@ db.run(createTableSql, (err) => {
 app.post("/addScore", (req, res) => {
   console.log("Adding Score", req.body);
 
-  // 1. Create the incomingScore object
   let assignedPort = getAssignedPort(req);
   const incomingScore = createIncomingScore(req, assignedPort);
 
-  // Initialize available ports
   let z_ports = [8080, 8081, 8082];
   if (assignedPort) {
     z_ports = z_ports.filter(port => port !== assignedPort);
   }
 
-  // Start sending request
-  sendRequest(assignedPort || z_ports.shift(), incomingScore, z_ports, res);
+  sendRequest(assignedPort || z_ports.shift(), incomingScore, z_ports, res)
+      .then(response => {
+        res.sendStatus(200);
+      })
+      .catch(error => {
+        handleRequestError(assignedPort, incomingScore, z_ports, res);
+      });
 });
 
 function getAssignedPort(req) {
@@ -97,7 +100,6 @@ function createIncomingScore(req, assignedPort) {
 }
 
 function sendRequest(currentPort, incomingScore, availablePorts, res) {
-  // Update the ReceiverIp in the incomingScore
   incomingScore.Metadata.ReceiverIp = currentPort.toString();
 
   const options = {
@@ -110,25 +112,36 @@ function sendRequest(currentPort, incomingScore, availablePorts, res) {
     },
   };
 
-  request(options, function (error, response, body) {
-    if (!error) {
-      res.sendStatus(200);
-    } else {
-      handleRequestError(currentPort, incomingScore, availablePorts, res);
-    }
+  return new Promise((resolve, reject) => {
+    request(options)
+        .then(response => {
+          resolve(response);
+        })
+        .catch(error => {
+          reject(error);
+        });
   });
 }
+
 
 function handleRequestError(failedPort, incomingScore, availablePorts, res) {
   console.log("Failed on port:", failedPort);
   availablePorts = availablePorts.filter(port => port !== failedPort);
+
   if (availablePorts.length > 0) {
     const nextPort = availablePorts.shift();
     console.log("Trying next port:", nextPort);
-    sendRequest(nextPort, incomingScore, availablePorts, res);
+
+    sendRequest(nextPort, incomingScore, availablePorts, res)
+        .then(response => {
+          res.sendStatus(200);
+        })
+        .catch(error => {
+          handleRequestError(nextPort, incomingScore, availablePorts, res);
+        });
   } else {
     console.log("No more ports to try.");
-    res.sendStatus(404);
+    res.status(500).send("Internal Server Error");
   }
 }
 
