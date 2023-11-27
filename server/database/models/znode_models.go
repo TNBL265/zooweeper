@@ -26,3 +26,7 @@ type Data struct {
 	Metadata    Metadata    `json:"Metadata"`
 	GameResults GameResults `json:"GameResults"`
 }
+
+type Metadatas struct {
+	MetadataList []Metadata `json:"MetadataList"`
+}

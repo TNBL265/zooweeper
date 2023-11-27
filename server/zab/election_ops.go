@@ -132,38 +132,10 @@ func (eo *ElectionOps) SelfElectLeaderRequest(portStr string) http.HandlerFunc {
 
 		// Declare itself leader to all other nodes if node succeeds
 		if !hasFailedElection {
-			eo.declareLeaderRequest(portStr, allServers)
+			eo.ab.declareLeaderRequest(portStr, allServers)
+			eo.ab.syncMetadata(allServers)
 		}
 		_ = eo.ab.writeJSON(w, http.StatusOK, payload)
-	}
-}
-
-// Send request to all other nodes that outgoing port is a leader.
-func (eo *ElectionOps) declareLeaderRequest(portStr string, allServers []string) {
-	for _, outgoingPort := range allServers {
-		//make a request
-		client := &http.Client{}
-		portURL := fmt.Sprintf("%s", outgoingPort)
-
-		url := fmt.Sprintf(eo.ab.BaseURL + ":" + portURL + "/declareLeaderReceive")
-		var electMessage = models.DeclareLeaderRequest{
-			IncomingPort: portStr,
-		}
-		jsonData, _ := json.Marshal(electMessage)
-
-		req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-		req.Header.Add("Accept", "application/json")
-		req.Header.Add("Content-Type", "application/json")
-
-		resp, err := client.Do(req)
-		if err != nil {
-			continue
-		}
-		defer resp.Body.Close()
 	}
 }
 

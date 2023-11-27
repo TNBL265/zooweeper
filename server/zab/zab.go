@@ -39,6 +39,7 @@ type AtomicBroadcast struct {
 	Write    WriteOps
 	Proposal ProposalOps
 	Election ElectionOps
+	Sync     SyncOps
 
 	ZTree ztree.ZooWeeperDatabaseRepo
 
@@ -96,6 +97,7 @@ func NewAtomicBroadcast(dbPath string) *AtomicBroadcast {
 	ab.Write.ab = ab
 	ab.Proposal.ab = ab
 	ab.Election.ab = ab
+	ab.Sync.ab = ab
 
 	ab.proposalState = COMMITTED
 
@@ -234,4 +236,48 @@ func (ab *AtomicBroadcast) startLeaderElection(currentPort int) {
 	if err != nil {
 	}
 	defer resp.Body.Close()
+}
+
+// Send request to all other nodes that outgoing port is a leader.
+func (ab *AtomicBroadcast) declareLeaderRequest(portStr string, allServers []string) {
+	for _, outgoingPort := range allServers {
+		//make a request
+		client := &http.Client{}
+		portURL := fmt.Sprintf("%s", outgoingPort)
+
+		url := fmt.Sprintf(ab.BaseURL + ":" + portURL + "/declareLeaderReceive")
+		var electMessage = models.DeclareLeaderRequest{
+			IncomingPort: portStr,
+		}
+		jsonData, _ := json.Marshal(electMessage)
+
+		req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		req.Header.Add("Accept", "application/json")
+		req.Header.Add("Content-Type", "application/json")
+
+		resp, err := client.Do(req)
+		if err != nil {
+			continue
+		}
+		defer resp.Body.Close()
+	}
+}
+
+func (ab *AtomicBroadcast) syncMetadata(allServers []string) {
+	color.Yellow("Syncing Metadata")
+	zNode, _ := ab.ZTree.GetLocalMetadata()
+	for _, outgoingPort := range allServers {
+		if outgoingPort != zNode.NodeIp {
+			url := fmt.Sprintf(ab.BaseURL + ":" + outgoingPort + "/syncMetadata")
+
+			var metadataList models.Metadatas
+			jsonData, _ := json.Marshal(metadataList)
+
+			_, err = ab.makeExternalRequest(nil, url, "POST", jsonData)
+		}
+	}
 }
