@@ -33,32 +33,9 @@ func main() {
 	allServers := []int{8080, 8081, 8082} //, 8083, 8084, 8085, 8086, 8087}
 
 	var dbPath string
-	switch port {
-	case 8080:
-		dbPath = "database/zooweeper-metadata-0.db"
-		state = ensemble.FOLLOWING
-	case 8081:
-		dbPath = "database/zooweeper-metadata-1.db"
-		state = ensemble.FOLLOWING
-	case 8082:
-		dbPath = "database/zooweeper-metadata-2.db"
-		state = ensemble.FOLLOWING
-	case 8083:
-		dbPath = "database/zooweeper-metadata-3.db"
-		state = ensemble.FOLLOWING
-	case 8084:
-		dbPath = "database/zooweeper-metadata-4.db"
-		state = ensemble.FOLLOWING
-	case 8085:
-		dbPath = "database/zooweeper-metadata-5.db"
-		state = ensemble.FOLLOWING
-	case 8086:
-		dbPath = "database/zooweeper-metadata-6.db"
-		state = ensemble.FOLLOWING
-	case 8087:
-		dbPath = "database/zooweeper-metadata-7.db"
-		state = ensemble.LEADING
-	default:
+	if port >= 8080 && port <= 8087 {
+		dbPath = fmt.Sprintf("database/zooweeper-metadata-%d.db", port-8080)
+	} else {
 		log.Fatalf("Only support ports 8080 to 8087")
 	}
 

@@ -49,7 +49,7 @@ func (rp *RequestProcessor) Routes(portStr string) http.Handler {
 	// Leader Election Request
 	mux.Group(func(r chi.Router) {
 		r.Post("/electLeader", rp.Zab.SelfElectLeaderRequest(portStr))
-		r.Post("/declareLeaderReceive", rp.Zab.DeclareLeaderReceive(portStr))
+		r.Post("/declareLeaderReceive", rp.Zab.DeclareLeaderReceive())
 	})
 
 	return mux
