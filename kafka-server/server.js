@@ -86,9 +86,7 @@ function createIncomingScore(req, assignedPort) {
       SenderIp: port,
       ReceiverIp: assignedPort ? assignedPort.toString() : undefined,
       Timestamp: currentTimestamp,
-      Version: 1,
-      Attempts: 1,
-      Clients: "9090,9091,9092"
+      Clients: req.body.metadata.Clients
     },
     GameResults: {
       Minute: req.body.gameResults.Minute,

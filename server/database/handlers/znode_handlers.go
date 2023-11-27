@@ -78,49 +78,15 @@ func (zt *ZTree) UpsertMetadata(metadata models.Metadata) error {
 		if err != nil {
 			return err
 		}
+	} else {
+		sameClients, _ := zt.checkSenderClientsMatch(metadata.SenderIp, metadata.Clients)
+		if !sameClients {
+			err := zt.updateClients(metadata.SenderIp, metadata.Clients)
+			if err != nil {
+				return err
+			}
+		}
 	}
-
-	// Insert actual metadata with ParentId=2 (child of above parent process)
-	err = zt.InsertMetadata(metadata, 2)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (zt *ZTree) parentProcessExist(senderIp string) (bool, error) {
-	sqlCheck := `SELECT COUNT(*) FROM ZNode WHERE SenderIp = ?`
-	var count int
-	err := zt.DB.QueryRow(sqlCheck, senderIp).Scan(&count)
-	if err != nil {
-		log.Println("Error checking row existence:", err)
-		return false, err
-	}
-	return count > 0, nil
-}
-
-func (zt *ZTree) insertParentProcessMetadata(metadata models.Metadata) error {
-	sqlPartialInsert := `
-	INSERT INTO ZNode (NodeIp, Leader, Servers, Timestamp, Attempts, Version, ParentId, Clients, SenderIp, ReceiverIp) 
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-`
-	row, err := zt.DB.Prepare(sqlPartialInsert)
-	if err != nil {
-		log.Println("Error preparing row for partial insert:", err)
-		return err
-	}
-	defer row.Close()
-
-	_, err = row.Exec(
-		metadata.NodeIp, "", "", "", 0, 0, 1,
-		metadata.Clients, metadata.SenderIp, metadata.ReceiverIp,
-	)
-	if err != nil {
-		log.Println("Error executing partial insert:", err)
-		return err
-	}
-
 	return nil
 }
 
@@ -149,22 +115,11 @@ func (zt *ZTree) UpdateFirstLeader(leader string) error {
 	sqlStatement := `
 		UPDATE ZNode 
 		SET Leader = $1 
+		WHERE NodeId = "1"
 	`
-	result, err := zt.DB.Exec(sqlStatement, leader)
+	_, err := zt.DB.Exec(sqlStatement, leader)
 	if err != nil {
-		log.Println("Error updating Leader column:", err)
 		return err
 	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		log.Println("Error getting rows affected:", err)
-		return err
-	}
-
-	if rowsAffected == 0 {
-		log.Println("No rows were updated. The table might be empty.")
-	}
-
-	return nil
+	return err
 }
