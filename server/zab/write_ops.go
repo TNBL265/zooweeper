@@ -26,7 +26,8 @@ func (wo *WriteOps) WriteMetaData(w http.ResponseWriter, r *http.Request) {
 	// Only modify Kafka-Server metadata if it is a leader
 	zNode, _ := wo.ab.ZTree.GetLocalMetadata()
 	if zNode.NodeIp == zNode.Leader {
-		ports, _ := wo.ab.ZTree.GetClients()
+		ports, _ := wo.ab.ZTree.GetClients(data.Metadata.SenderIp)
+		log.Println("DEBUG", ports)
 		jsonData, _ := json.Marshal(data.GameResults)
 		for _, port := range ports {
 			url := fmt.Sprintf("%s:%s/updateScore", wo.ab.BaseURL, port)
