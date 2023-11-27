@@ -26,7 +26,7 @@ func (rp *RequestProcessor) Routes(portStr string) http.Handler {
 
 	// Read Request
 	mux.Group(func(r chi.Router) {
-		r.Post("/", rp.Zab.Ping(portStr))
+		r.Post("/", rp.Zab.Election.Ping(portStr))
 		r.Get("/metadata", rp.Zab.Read.GetAllMetadata)
 	})
 
@@ -48,8 +48,8 @@ func (rp *RequestProcessor) Routes(portStr string) http.Handler {
 
 	// Leader Election Request
 	mux.Group(func(r chi.Router) {
-		r.Post("/electLeader", rp.Zab.SelfElectLeaderRequest(portStr))
-		r.Post("/declareLeaderReceive", rp.Zab.DeclareLeaderReceive())
+		r.Post("/electLeader", rp.Zab.Election.SelfElectLeaderRequest(portStr))
+		r.Post("/declareLeaderReceive", rp.Zab.Election.DeclareLeaderReceive())
 	})
 
 	return mux

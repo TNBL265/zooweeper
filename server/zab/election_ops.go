@@ -15,12 +15,16 @@ import (
 	"time"
 )
 
-func (ab *AtomicBroadcast) Ping(portStr string) http.HandlerFunc {
+type ElectionOps struct {
+	ab *AtomicBroadcast
+}
+
+func (eo *ElectionOps) Ping(portStr string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var requestPayload models.HealthCheck
-		err := ab.readJSON(w, r, &requestPayload)
+		err := eo.ab.readJSON(w, r, &requestPayload)
 		if err != nil {
-			ab.errorJSON(w, err, http.StatusBadRequest)
+			eo.ab.errorJSON(w, err, http.StatusBadRequest)
 			return
 		}
 		color.Magenta("Received Healthcheck from Port:%s, Message:%s \n", requestPayload.PortNumber, requestPayload.Message)
@@ -30,19 +34,19 @@ func (ab *AtomicBroadcast) Ping(portStr string) http.HandlerFunc {
 			PortNumber: portStr,
 		}
 
-		_ = ab.writeJSON(w, http.StatusOK, payload)
+		_ = eo.ab.writeJSON(w, http.StatusOK, payload)
 	}
 }
 
-func (ab *AtomicBroadcast) SelfElectLeaderRequest(portStr string) http.HandlerFunc {
+func (eo *ElectionOps) SelfElectLeaderRequest(portStr string) http.HandlerFunc {
 	const REQUEST_TIMEOUT = 10 // Arbitrary wait timer to simulate response time arrival
 	return func(w http.ResponseWriter, r *http.Request) {
 		hasFailedElection := false
 
 		var requestPayload models.ElectLeaderRequest
-		err := ab.readJSON(w, r, &requestPayload)
+		err := eo.ab.readJSON(w, r, &requestPayload)
 		if err != nil {
-			ab.errorJSON(w, err, http.StatusBadRequest)
+			eo.ab.errorJSON(w, err, http.StatusBadRequest)
 			return
 		}
 		color.Magenta("Received election message from Port:%s \n", requestPayload.IncomingPort)
@@ -53,7 +57,7 @@ func (ab *AtomicBroadcast) SelfElectLeaderRequest(portStr string) http.HandlerFu
 		payload := models.ElectLeaderResponse{
 			IsSuccess: strconv.FormatBool(incomingPortNumber > currentPortNumber),
 		}
-		metadata, _ := ab.ZTree.GetLocalMetadata()
+		metadata, _ := eo.ab.ZTree.GetLocalMetadata()
 		allServers := strings.Split(metadata.Servers, ",")
 
 		// If it has a better node number than the incoming one, send a value updwards to all nodes higher than it.
@@ -69,7 +73,7 @@ func (ab *AtomicBroadcast) SelfElectLeaderRequest(portStr string) http.HandlerFu
 				client := &http.Client{}
 				portURL := fmt.Sprintf("%s", outgoingPort)
 
-				url := fmt.Sprintf(ab.BaseURL + ":" + portURL + "/electLeader")
+				url := fmt.Sprintf(eo.ab.BaseURL + ":" + portURL + "/electLeader")
 				var electMessage models.ElectLeaderRequest = models.ElectLeaderRequest{
 					IncomingPort: fmt.Sprintf("%d", currentPortNumber),
 				}
@@ -128,20 +132,20 @@ func (ab *AtomicBroadcast) SelfElectLeaderRequest(portStr string) http.HandlerFu
 
 		// Declare itself leader to all other nodes if node succeeds
 		if !hasFailedElection {
-			ab.declareLeaderRequest(portStr, allServers)
+			eo.declareLeaderRequest(portStr, allServers)
 		}
-		_ = ab.writeJSON(w, http.StatusOK, payload)
+		_ = eo.ab.writeJSON(w, http.StatusOK, payload)
 	}
 }
 
 // Send request to all other nodes that outgoing port is a leader.
-func (ab *AtomicBroadcast) declareLeaderRequest(portStr string, allServers []string) {
+func (eo *ElectionOps) declareLeaderRequest(portStr string, allServers []string) {
 	for _, outgoingPort := range allServers {
 		//make a request
 		client := &http.Client{}
 		portURL := fmt.Sprintf("%s", outgoingPort)
 
-		url := fmt.Sprintf(ab.BaseURL + ":" + portURL + "/declareLeaderReceive")
+		url := fmt.Sprintf(eo.ab.BaseURL + ":" + portURL + "/declareLeaderReceive")
 		var electMessage = models.DeclareLeaderRequest{
 			IncomingPort: portStr,
 		}
@@ -164,17 +168,17 @@ func (ab *AtomicBroadcast) declareLeaderRequest(portStr string, allServers []str
 }
 
 // DeclareLeaderReceive send response to all other nodes that incoming port is a leader.
-func (ab *AtomicBroadcast) DeclareLeaderReceive() http.HandlerFunc {
+func (eo *ElectionOps) DeclareLeaderReceive() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		//send information to all servers
 		var requestPayload models.DeclareLeaderRequest
-		err := ab.readJSON(w, r, &requestPayload)
+		err := eo.ab.readJSON(w, r, &requestPayload)
 		if err != nil {
-			ab.errorJSON(w, err, http.StatusBadRequest)
+			eo.ab.errorJSON(w, err, http.StatusBadRequest)
 			return
 		}
 
 		color.Cyan("%s", requestPayload.IncomingPort)
-		ab.ZTree.UpdateFirstLeader(requestPayload.IncomingPort)
+		eo.ab.ZTree.UpdateFirstLeader(requestPayload.IncomingPort)
 	}
 }
