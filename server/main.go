@@ -54,7 +54,7 @@ func main() {
 	go server.Rp.Zab.WakeupLeaderElection(port)
 	go server.Rp.Zab.ListenForLeaderElection(port, leader)
 	go func() {
-		_, err := ping(server, portStr)
+		_, err := ping(server)
 		if err == nil {
 			fmt.Println("Ping successful")
 		}
@@ -93,29 +93,29 @@ func initZNode(server *ensemble.Server, port, leader int, allServers []int) {
 // ping all other servers
 // If the ping response takes more than an arbitrary time, or the connection is refused from the other server,
 // then call the Error Channel with error information to signal Leader Election
-func ping(server *ensemble.Server, currentPort string) (string, error) {
+func ping(server *ensemble.Server) (string, error) {
 	const PING_TIMEOUT = 5
 	const REQUEST_TIMEOUT = 2
+
+	zNode, _ := server.Rp.Zab.ZTree.GetLocalMetadata()
+	currentPort := zNode.NodeIp
 	for {
-
 		time.Sleep(time.Second * time.Duration(PING_TIMEOUT))
-		// start timer here
-		startTime := time.Now()
+		//startTime := time.Now()
 
-		var healthCheck models.HealthCheck = models.HealthCheck{
+		var healthCheck = models.HealthCheck{
 			Message:    "ping!",
 			PortNumber: currentPort,
 		}
 		jsonData, _ := json.Marshal(healthCheck)
 
-		metadata, _ := server.Rp.Zab.ZTree.GetLocalMetadata()
-		servers := strings.Split(metadata.Servers, ",")
-		for _, v := range servers {
-			if currentPort == v {
+		servers := strings.Split(zNode.Servers, ",")
+		for _, otherPort := range servers {
+			if currentPort == otherPort {
 				continue
 			}
 			client := &http.Client{}
-			url := fmt.Sprintf(server.Rp.Zab.BaseURL + ":" + v + "/")
+			url := fmt.Sprintf(server.Rp.Zab.BaseURL + ":" + otherPort + "/")
 
 			req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 			if err != nil {
@@ -124,8 +124,9 @@ func ping(server *ensemble.Server, currentPort string) (string, error) {
 			}
 			req.Header.Add("Accept", "application/json")
 			req.Header.Add("Content-Type", "application/json")
+			req.Header.Add("X-Sender-Port", zNode.NodeIp)
 
-			color.Blue("Sending Ping to Port: %s", v)
+			color.Green("Ping %s", otherPort)
 
 			ctx, cancel := context.WithTimeout(context.Background(), REQUEST_TIMEOUT*time.Second)
 			defer cancel()
@@ -145,7 +146,7 @@ func ping(server *ensemble.Server, currentPort string) (string, error) {
 
 				errorData := models.HealthCheckError{
 					Error:     err,
-					ErrorPort: v,
+					ErrorPort: otherPort,
 					IsWakeup:  false,
 				}
 				server.Rp.Zab.ErrorLeaderChan <- errorData
@@ -165,19 +166,13 @@ func ping(server *ensemble.Server, currentPort string) (string, error) {
 				log.Println(err)
 				continue
 			}
-
-			// Status Code of Pong
-			statusCode := resp.StatusCode
-			color.Green("Status Code received: %d\n", statusCode)
-
 			// Port number
-			color.Green("Pong return from Server Port Number: %s \n", responseObject.PortNumber)
+			color.Green("%s Pong", responseObject.PortNumber)
 
 			// Elapsed Time
-			endTime := time.Now()
-			elapsedTime := endTime.Sub(startTime)
-			color.Green("Time taken to get this Pong return: %s\n", elapsedTime)
+			//endTime := time.Now()
+			//elapsedTime := endTime.Sub(startTime)
+			//color.Green("Time taken to get this Pong return: %s\n", elapsedTime)
 		}
-		fmt.Printf("===================\n")
 	}
 }
