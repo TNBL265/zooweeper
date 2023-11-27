@@ -90,25 +90,25 @@ func (zt *ZTree) UpsertMetadata(metadata models.Metadata) error {
 	return nil
 }
 
-func (zt *ZTree) GetClients() ([]string, error) {
-	sqlStatement := "SELECT Clients FROM ZNode WHERE NodeId = ?"
-	rows, err := zt.DB.Query(sqlStatement, 2)
+func (zt *ZTree) GetClients(client string) ([]string, error) {
+	sqlStatement := "SELECT Clients FROM ZNode WHERE SenderIp=$1"
+	rows, err := zt.DB.Query(sqlStatement, client)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var serversStr string
+	var clientsStr string
 	if rows.Next() {
-		err := rows.Scan(&serversStr)
+		err := rows.Scan(&clientsStr)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	servers := strings.Split(serversStr, ",")
+	clients := strings.Split(clientsStr, ",")
 
-	return servers, nil
+	return clients, nil
 }
 
 func (zt *ZTree) UpdateFirstLeader(leader string) error {
