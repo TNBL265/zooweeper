@@ -12,6 +12,9 @@ type ZooWeeperDatabaseRepo interface {
 	InitializeDB()
 	NodeIdExists(nodeId int) (bool, error)
 	GetLocalMetadata() (*models.Metadata, error)
+	GetMetadataWithParentId(parentId int) (models.Metadatas, error)
+	GetVersionBySenderIp(senderIp string) (int, error)
+	UpdateMetadata(metadata models.Metadata) error
 
 	// ZNode
 	GetClients(client string) ([]string, error)

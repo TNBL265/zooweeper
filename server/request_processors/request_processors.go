@@ -52,5 +52,11 @@ func (rp *RequestProcessor) Routes(portStr string) http.Handler {
 		r.Post("/declareLeaderReceive", rp.Zab.Election.DeclareLeaderReceive())
 	})
 
+	// Data Sync Request
+	mux.Group(func(r chi.Router) {
+		r.Post("/syncMetadata", rp.Zab.Sync.SyncRequestHandler)
+		r.Post("/updateMetadata", rp.Zab.Sync.SyncMetadataHandler)
+	})
+
 	return mux
 }

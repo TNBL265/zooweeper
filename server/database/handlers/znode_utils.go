@@ -135,3 +135,88 @@ func (zt *ZTree) updateClients(senderIp, clients string) error {
 
 	return nil
 }
+
+func (zt *ZTree) GetMetadataWithParentId(parentId int) (models.Metadatas, error) {
+	sqlStatement := `
+        SELECT NodeId, NodeIp, Leader, Servers, Timestamp, Attempts, Version, ParentId, Clients, SenderIp, ReceiverIp 
+        FROM ZNode 
+        WHERE ParentId = ?
+    `
+	rows, err := zt.DB.Query(sqlStatement, parentId)
+	if err != nil {
+		log.Println("Error querying Metadata with ParentId:", err)
+		return models.Metadatas{}, err
+	}
+	defer rows.Close()
+
+	var metadatas models.Metadatas
+	for rows.Next() {
+		var md models.Metadata
+		err := rows.Scan(&md.NodeId, &md.NodeIp, &md.Leader, &md.Servers, &md.Timestamp, &md.Attempts, &md.Version, &md.ParentId, &md.Clients, &md.SenderIp, &md.ReceiverIp)
+		if err != nil {
+			log.Println("Error scanning Metadata row:", err)
+			return models.Metadatas{}, err
+		}
+		metadatas.MetadataList = append(metadatas.MetadataList, md)
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Println("Error iterating Metadata rows:", err)
+		return models.Metadatas{}, err
+	}
+
+	return metadatas, nil
+}
+
+func (zt *ZTree) GetVersionBySenderIp(senderIp string) (int, error) {
+	sqlStatement := `
+        SELECT Version 
+        FROM ZNode 
+        WHERE SenderIp = ? AND ParentId = 1
+    `
+	var version int
+	err := zt.DB.QueryRow(sqlStatement, senderIp).Scan(&version)
+	if err != nil {
+		log.Println("Error querying version by SenderIp:", err)
+		return -1, err
+	}
+
+	return version, nil
+}
+
+func (zt *ZTree) UpdateMetadata(metadata models.Metadata) error {
+	var exists bool
+	checkSql := `SELECT EXISTS(SELECT 1 FROM ZNode WHERE SenderIp = ?)`
+	err := zt.DB.QueryRow(checkSql, metadata.SenderIp).Scan(&exists)
+	if err != nil {
+		log.Println("Error checking existence:", err)
+		return err
+	}
+
+	if exists {
+		// If exists, update existing
+		updateSql := `
+            UPDATE ZNode 
+            SET NodeIp = ?, Leader = ?, Servers = ?, Timestamp = ?, Attempts = ?, Version = ?, ParentId = ?, Clients = ?, ReceiverIp = ?
+            WHERE SenderIp = ?
+        `
+		_, err := zt.DB.Exec(updateSql, metadata.NodeIp, metadata.Leader, metadata.Servers, metadata.Timestamp, metadata.Attempts, metadata.Version, metadata.ParentId, metadata.Clients, metadata.ReceiverIp, metadata.SenderIp)
+		if err != nil {
+			log.Println("Error updating Metadata:", err)
+			return err
+		}
+	} else {
+		// Else, insert new
+		insertSql := `
+            INSERT INTO ZNode (NodeIp, Leader, Servers, Timestamp, Attempts, Version, ParentId, Clients, SenderIp, ReceiverIp)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `
+		_, err := zt.DB.Exec(insertSql, metadata.NodeIp, metadata.Leader, metadata.Servers, metadata.Timestamp, metadata.Attempts, metadata.Version, metadata.ParentId, metadata.Clients, metadata.SenderIp, metadata.ReceiverIp)
+		if err != nil {
+			log.Println("Error inserting new Metadata:", err)
+			return err
+		}
+	}
+
+	return nil
+}
