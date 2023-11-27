@@ -97,10 +97,10 @@ func ping(server *ensemble.Server) (string, error) {
 	const PING_TIMEOUT = 5
 	const REQUEST_TIMEOUT = 2
 
-	zNode, _ := server.Rp.Zab.ZTree.GetLocalMetadata()
-	currentPort := zNode.NodeIp
 	for {
 		time.Sleep(time.Second * time.Duration(PING_TIMEOUT))
+		zNode, _ := server.Rp.Zab.ZTree.GetLocalMetadata()
+		currentPort := zNode.NodeIp
 		//startTime := time.Now()
 
 		var healthCheck = models.HealthCheck{
@@ -142,7 +142,6 @@ func ping(server *ensemble.Server) (string, error) {
 			}
 			if err != nil || resp == nil {
 				color.Red("Error sending ping to %s", otherPort)
-				//log.Println(err)
 
 				errorData := models.HealthCheckError{
 					Error:     err,

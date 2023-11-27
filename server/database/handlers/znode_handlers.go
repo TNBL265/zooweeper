@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"github.com/tnbl265/zooweeper/database/models"
 	"log"
+	"strconv"
 	"strings"
 )
 
@@ -112,12 +113,22 @@ func (zt *ZTree) GetClients(client string) ([]string, error) {
 }
 
 func (zt *ZTree) UpdateFirstLeader(leader string) error {
+	leaderNum, err := strconv.Atoi(leader)
+	if err != nil {
+		return err
+	}
+	var servers []string
+	for i := 8080; i <= leaderNum; i++ {
+		servers = append(servers, strconv.Itoa(i))
+	}
+	serversList := strings.Join(servers, ",")
+
 	sqlStatement := `
 		UPDATE ZNode 
-		SET Leader = $1 
+		SET Leader = $1, Servers = ?
 		WHERE NodeId = "1"
 	`
-	_, err := zt.DB.Exec(sqlStatement, leader)
+	_, err = zt.DB.Exec(sqlStatement, leader, serversList)
 	if err != nil {
 		return err
 	}
