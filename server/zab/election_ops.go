@@ -35,7 +35,7 @@ func (ab *AtomicBroadcast) Ping(portStr string) http.HandlerFunc {
 }
 
 func (ab *AtomicBroadcast) SelfElectLeaderRequest(portStr string) http.HandlerFunc {
-	const REQUEST_TIMEOUT = 10 // Arbitruary wait timer to simulate response time arrival
+	const REQUEST_TIMEOUT = 10 // Arbitrary wait timer to simulate response time arrival
 	return func(w http.ResponseWriter, r *http.Request) {
 		hasFailedElection := false
 
@@ -142,7 +142,7 @@ func (ab *AtomicBroadcast) declareLeaderRequest(portStr string, allServers []str
 		portURL := fmt.Sprintf("%s", outgoingPort)
 
 		url := fmt.Sprintf(ab.BaseURL + ":" + portURL + "/declareLeaderReceive")
-		var electMessage models.DeclareLeaderRequest = models.DeclareLeaderRequest{
+		var electMessage = models.DeclareLeaderRequest{
 			IncomingPort: portStr,
 		}
 		jsonData, _ := json.Marshal(electMessage)
@@ -163,8 +163,8 @@ func (ab *AtomicBroadcast) declareLeaderRequest(portStr string, allServers []str
 	}
 }
 
-// Receive response to all other nodes that incoming port is a leader.
-func (ab *AtomicBroadcast) DeclareLeaderReceive(portStr string) http.HandlerFunc {
+// DeclareLeaderReceive send response to all other nodes that incoming port is a leader.
+func (ab *AtomicBroadcast) DeclareLeaderReceive() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		//send information to all servers
 		var requestPayload models.DeclareLeaderRequest
