@@ -38,7 +38,9 @@ type AtomicBroadcast struct {
 	Read     ReadOps
 	Write    WriteOps
 	Proposal ProposalOps
-	ZTree    ztree.ZooWeeperDatabaseRepo
+	Election ElectionOps
+
+	ZTree ztree.ZooWeeperDatabaseRepo
 
 	// Proposal
 	ackCounter    int
@@ -93,6 +95,7 @@ func NewAtomicBroadcast(dbPath string) *AtomicBroadcast {
 	ab.Read.ab = ab
 	ab.Write.ab = ab
 	ab.Proposal.ab = ab
+	ab.Election.ab = ab
 
 	ab.proposalState = COMMITTED
 
