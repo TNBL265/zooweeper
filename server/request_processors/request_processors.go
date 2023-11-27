@@ -27,10 +27,7 @@ func (rp *RequestProcessor) Routes(portStr string) http.Handler {
 	// Read Request
 	mux.Group(func(r chi.Router) {
 		r.Post("/", rp.Zab.Ping(portStr))
-		r.Post("/electLeader", rp.Zab.SelfElectLeaderRequest(portStr))
-		r.Post("/declareLeaderReceive", rp.Zab.DeclareLeaderReceive(portStr))
 		r.Get("/metadata", rp.Zab.Read.GetAllMetadata)
-		r.Post("/scoreExists/{leader}", rp.Zab.Read.DoesScoreExist)
 	})
 
 	// Write Request
@@ -38,17 +35,21 @@ func (rp *RequestProcessor) Routes(portStr string) http.Handler {
 		r.Use(rp.Zab.QueueMiddleware)
 		r.Use(rp.Zab.Write.WriteOpsMiddleware)
 
-		//r.Post("/score", rp.Zab.Write.AddScore)
 		r.Post("/metadata", rp.Zab.Write.UpdateMetaData)
-		r.Delete("/score/{leader}", rp.Zab.Write.DeleteScore)
 	})
 
 	// Proposal Request
 	mux.Group(func(r chi.Router) {
-		mux.Post("/proposeWrite", rp.Zab.Proposal.ProposeWrite)
-		mux.Post("/acknowledgeProposal", rp.Zab.Proposal.AcknowledgeProposal)
-		mux.Post("/commitWrite", rp.Zab.Proposal.CommitWrite)
+		r.Post("/proposeWrite", rp.Zab.Proposal.ProposeWrite)
+		r.Post("/acknowledgeProposal", rp.Zab.Proposal.AcknowledgeProposal)
+		r.Post("/commitWrite", rp.Zab.Proposal.CommitWrite)
 		r.Post("/writeMetadata", rp.Zab.Write.WriteMetaData)
+	})
+
+	// Leader Election Request
+	mux.Group(func(r chi.Router) {
+		r.Post("/electLeader", rp.Zab.SelfElectLeaderRequest(portStr))
+		r.Post("/declareLeaderReceive", rp.Zab.DeclareLeaderReceive(portStr))
 	})
 
 	return mux

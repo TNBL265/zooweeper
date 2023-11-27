@@ -19,7 +19,6 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/tnbl265/zooweeper/database/models"
 	ensemble "github.com/tnbl265/zooweeper/ensemble"
-	zooweeper "github.com/tnbl265/zooweeper/zab"
 )
 
 func main() {
@@ -31,7 +30,7 @@ func main() {
 
 	var state ensemble.ServerState
 	leader := 8082
-	allServers := []int{8080, 8081, 8082, 8083, 8084, 8085, 8086, 8087}
+	allServers := []int{8080, 8081, 8082} //, 8083, 8084, 8085, 8086, 8087}
 
 	var dbPath string
 	switch port {
@@ -73,21 +72,17 @@ func main() {
 		}
 	}(server.Rp.Zab.ZTree.Connection())
 
-	// Listen for errors
+	// Regular Health Checks and start Leader Election if need to
 	var err error
-	myAB := &AtomicBroadcastCopy{AtomicBroadcast: server.Rp.Zab}
-	go myAB.wakeupLeaderElection(server, port, leader, allServers)
-	go myAB.listenForLeaderElection(server, port, leader, allServers)
+	go server.Rp.Zab.WakeupLeaderElection(port)
+	go server.Rp.Zab.ListenForLeaderElection(port, leader)
 	go func() {
 		_, err := ping(server, portStr)
-		if err != nil {
-			// do sth
-		} else {
+		if err == nil {
 			fmt.Println("Ping successful")
 		}
 	}()
 
-	// I
 	initZNode(server, port, leader, allServers)
 
 	err = http.ListenAndServe(fmt.Sprintf(":"+portStr), server.Rp.Routes(portStr))
@@ -118,12 +113,12 @@ func initZNode(server *ensemble.Server, port, leader int, allServers []int) {
 	server.Rp.Zab.ZTree.InsertMetadata(metadata, 0)
 }
 
-// This function pings all other servers every arbitruary time
-// If the ping response takes more than an arbitruary time, or the connection is refused from the other server,
-// then call the Error Channel with error information.
+// ping all other servers
+// If the ping response takes more than an arbitrary time, or the connection is refused from the other server,
+// then call the Error Channel with error information to signal Leader Election
 func ping(server *ensemble.Server, currentPort string) (string, error) {
-	const PING_TIMEOUT = 5    // Arbitruary wait timer to simulate response time arrival
-	const REQUEST_TIMEOUT = 2 // Arbitruary wait timer to simulate response time arrival
+	const PING_TIMEOUT = 5
+	const REQUEST_TIMEOUT = 2
 	for {
 
 		time.Sleep(time.Second * time.Duration(PING_TIMEOUT))
@@ -208,66 +203,4 @@ func ping(server *ensemble.Server, currentPort string) (string, error) {
 		}
 		fmt.Printf("===================\n")
 	}
-}
-
-type AtomicBroadcastCopy struct {
-	zooweeper.AtomicBroadcast // Embedding the type from the external package
-}
-
-func (ab *AtomicBroadcastCopy) wakeupLeaderElection(server *ensemble.Server, port int, leader int, allServers []int) {
-	for {
-		select {
-		case <-time.After(time.Second * 2):
-			// On wake-up, start leader-election
-			data := models.HealthCheckError{
-				Error:     nil,
-				ErrorPort: fmt.Sprintf("%d", port),
-				IsWakeup:  true,
-			}
-			ab.ErrorLeaderChan <- data
-			return
-		}
-	}
-}
-func (ab *AtomicBroadcastCopy) listenForLeaderElection(server *ensemble.Server, port int, leader int, allServers []int) {
-	for {
-		select {
-		case errorData := <-ab.ErrorLeaderChan:
-			errorPortNumber, _ := strconv.Atoi(errorData.ErrorPort)
-			if errorPortNumber == leader || errorData.IsWakeup {
-				if errorPortNumber == leader {
-					color.Magenta("Error from port %d healthcheck! Starting leader election here...", errorPortNumber)
-				} else if errorData.IsWakeup {
-					color.Magenta("Port %d just woke up! Starting leader election here...", port)
-				}
-
-				ab.startLeaderElection(server, port, allServers)
-			}
-		}
-	}
-}
-
-// Starts the leader election by calling its own server handler with information of the port information.
-func (ab *AtomicBroadcastCopy) startLeaderElection(server *ensemble.Server, currentPort int, allServers []int) {
-
-	client := &http.Client{}
-	portURL := fmt.Sprintf("%d", currentPort)
-
-	url := fmt.Sprintf(ab.BaseURL + ":" + portURL + "/electLeader")
-	var electMessage models.ElectLeaderRequest = models.ElectLeaderRequest{
-		IncomingPort: fmt.Sprintf("%d", currentPort),
-	}
-	jsonData, _ := json.Marshal(electMessage)
-
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
-	if err != nil {
-		log.Println(err)
-	}
-	req.Header.Add("Accept", "application/json")
-	req.Header.Add("Content-Type", "application/json")
-
-	resp, err := client.Do(req)
-	if err != nil {
-	}
-	defer resp.Body.Close()
 }

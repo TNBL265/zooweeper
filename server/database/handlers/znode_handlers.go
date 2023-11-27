@@ -124,33 +124,6 @@ func (zt *ZTree) insertParentProcessMetadata(metadata models.Metadata) error {
 	return nil
 }
 
-func (zt *ZTree) CheckMetadataExist(leader string) (bool, error) {
-
-	sqlStatement := "SELECT COUNT(*) FROM ZNode WHERE Leader = ?"
-
-	var count int
-	err := zt.DB.QueryRow(sqlStatement, leader).Scan(&count)
-	if err != nil {
-		log.Println("Error executing reading row", err)
-		return false, err
-	}
-
-	return true, nil
-}
-
-func (zt *ZTree) DeleteMetadata(leader string) error {
-
-	sqlStatement := "DELETE FROM ZNode WHERE Leader = ?"
-
-	_, err := zt.DB.Exec(sqlStatement, leader)
-	if err != nil {
-		log.Println("Error executing delete row", err)
-		return err
-	}
-
-	return nil
-}
-
 func (zt *ZTree) GetClients() ([]string, error) {
 	sqlStatement := "SELECT Clients FROM ZNode WHERE NodeId = ?"
 	rows, err := zt.DB.Query(sqlStatement, 2)
@@ -191,7 +164,6 @@ func (zt *ZTree) UpdateFirstLeader(leader string) error {
 
 	if rowsAffected == 0 {
 		log.Println("No rows were updated. The table might be empty.")
-		// You can choose to handle this as an error or as a special case.
 	}
 
 	return nil

@@ -3,7 +3,6 @@ package zooweeper
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/go-chi/chi/v5"
 	"log"
 	"net/http"
 )
@@ -36,14 +35,4 @@ func (wo *WriteOps) WriteMetaData(w http.ResponseWriter, r *http.Request) {
 	}
 
 	wo.ab.writeJSON(w, http.StatusOK, data)
-}
-
-func (wo *WriteOps) DeleteScore(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "leader")
-
-	err := wo.ab.ZTree.DeleteMetadata(id)
-	if err != nil {
-		wo.ab.errorJSON(w, err)
-		return
-	}
 }
