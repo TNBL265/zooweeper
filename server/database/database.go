@@ -18,8 +18,6 @@ type ZooWeeperDatabaseRepo interface {
 	InsertMetadata(metadata models.Metadata, parentId int) error
 	UpsertMetadata(metadata models.Metadata) error
 	AllMetadata() ([]*models.Metadata, error)
-	DeleteMetadata(Leader string) error
-	CheckMetadataExist(Leader string) (bool, error)
 
 	UpdateFirstLeader(Leader string) error
 }
