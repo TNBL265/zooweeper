@@ -1,16 +1,15 @@
 #!/bin/bash
 
-if [ -z "$1" ]; then
-  echo "Usage: $0 <num_requests>"
+if [ -z "$1" ] || [ -z "$2" ]; then
+  echo "Usage: $0 <num_requests> <kafka-port> <other-clients>"
   exit 1
 fi
 
 num_requests=$1
+kafka_port=$2
+clients=$3
 
-# Kafka Server random choices
-ports=(9090 9091 9092)
-selected_port=${ports[$RANDOM % ${#ports[@]}]}
-base_url="http://localhost:$selected_port/addScore"
+base_url="http://localhost:$kafka_port/addScore"
 
 names=("Ronaldo" "Messi" "Pele" "Maradona")
 clubs=("FCB" "RMA" "MU" "FCB")
@@ -32,7 +31,8 @@ send_post_request() {
   local payload=$(cat <<EOF
 {
     "metadata": {
-      "ReceiverIp": "$ip"
+      "ReceiverIp": "$ip",
+      "Clients": "$clients"
     },
     "gameResults": {
         "Minute": $minute,

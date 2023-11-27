@@ -71,10 +71,10 @@ PORT=3000 npm start
 cd zooweeper
 docker-compose up
 ```
-- Test sending of `100` requests
+- Test sending of `10` requests from Kafka Server `9090` piggybacking all other Kafka Server metadata `"9090,9091,9092"`
 ```shell
 cd zooweeper
-./send_requests.sh 100
+./send_requests.sh 10 9090 "9090,9091,9092"
 ```
 
 ## References:
