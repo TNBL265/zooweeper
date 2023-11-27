@@ -27,7 +27,6 @@ func (eo *ElectionOps) Ping(portStr string) http.HandlerFunc {
 			eo.ab.errorJSON(w, err, http.StatusBadRequest)
 			return
 		}
-		color.Magenta("Received Healthcheck from Port:%s, Message:%s \n", requestPayload.PortNumber, requestPayload.Message)
 
 		payload := models.HealthCheck{
 			Message:    "pong",

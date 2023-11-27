@@ -2,9 +2,10 @@ package zooweeper
 
 import (
 	"encoding/json"
-	"log"
+	"github.com/fatih/color"
 	"net/http"
 	"strings"
+	"time"
 )
 
 type ProposalOps struct {
@@ -15,13 +16,14 @@ func (po *ProposalOps) ProposeWrite(w http.ResponseWriter, r *http.Request) {
 	zNode, _ := po.ab.ZTree.GetLocalMetadata()
 	clientPort := r.Header.Get("X-Sender-Port")
 	if clientPort != zNode.Leader {
-		log.Fatalf("I only supposed to receive Propose Write from leader not from %s\n", clientPort)
+		color.Red("I only supposed to receive Propose Write from leader not from %s\n", clientPort)
 	}
 
 	data := po.ab.CreateMetadata(w, r)
 	jsonData, _ := json.Marshal(data)
 
-	log.Printf("%s Receive Propose Write from %s\n", zNode.NodeIp, clientPort)
+	color.HiBlue("%s received Propose Write from %s\n", zNode.NodeIp, clientPort)
+	color.HiBlue("%s sending ACK to %s\n", zNode.NodeIp, clientPort)
 	url := po.ab.BaseURL + ":" + zNode.Leader + "/acknowledgeProposal"
 	_, err = po.ab.makeExternalRequest(nil, url, "POST", jsonData)
 }
@@ -30,46 +32,54 @@ func (po *ProposalOps) AcknowledgeProposal(w http.ResponseWriter, r *http.Reques
 	zNode, _ := po.ab.ZTree.GetLocalMetadata()
 	clientPort := r.Header.Get("X-Sender-Port")
 	if clientPort == zNode.Leader {
-		log.Fatalf("I'm the Leader I'm not supposed to get acknowledged from myself\n")
+		color.Red("I'm the Leader I'm not supposed to get acknowledged from myself\n")
 	}
-	log.Printf("Received Acknowledgement from %s\n", clientPort)
+	color.HiBlue("Leader %s received ACK from Follower %s\n", zNode.NodeIp, clientPort)
 
-	// Wait for all Follower to ACK
-	portsSlice := strings.Split(zNode.Servers, ",")
-	if po.ab.AckCounter() != (len(portsSlice) / 2) {
-		counter := po.ab.AckCounter()
-		counter++
-		po.ab.SetAckCounter(counter)
-
-		if po.ab.AckCounter() == len(portsSlice)/2 {
-			log.Printf("Majority ACK received, %d\n", po.ab.AckCounter())
-			po.ab.SetAckCounter(0)
-			po.ab.SetProposalState(ACKNOWLEDGED)
+	if po.ab.ProposalState() != ACKNOWLEDGED {
+		currentAckCount := po.ab.AckCounter()
+		currentAckCount++
+		po.ab.SetAckCounter(currentAckCount)
+		// Wait for majority of Follower to ACK
+		portsSlice := strings.Split(zNode.Servers, ",")
+		majority := len(portsSlice) / 2
+		for {
+			if currentAckCount > majority {
+				color.HiBlue("Leader %s received majority ACK, %d\n", zNode.NodeIp, currentAckCount)
+				po.ab.SetAckCounter(0)
+				po.ab.SetProposalState(ACKNOWLEDGED)
+				break
+			} else if po.ab.ProposalState() == ACKNOWLEDGED {
+				break
+			}
+			time.Sleep(100 * time.Millisecond)
 		}
 	}
 
 	data := po.ab.CreateMetadata(w, r)
 	jsonData, _ := json.Marshal(data)
 
-	log.Printf("Asking Follower %s to commit\n", clientPort)
+	color.HiBlue("Leader %s asking Follower %s to commit\n", zNode.NodeIp, clientPort)
 	url := po.ab.BaseURL + ":" + clientPort + "/commitWrite"
 	_, err = po.ab.makeExternalRequest(nil, url, "POST", jsonData)
 	if err != nil {
-		log.Printf("Error Asking Follower %s to commit: %s\n", clientPort, err.Error())
+		color.HiBlue("Error Asking Follower %s to commit: %s\n", clientPort, err.Error())
 	}
 
 }
 
 func (po *ProposalOps) CommitWrite(w http.ResponseWriter, r *http.Request) {
 	zNode, _ := po.ab.ZTree.GetLocalMetadata()
+	clientPort := r.Header.Get("X-Sender-Port")
 
 	data := po.ab.CreateMetadata(w, r)
-
 	jsonData, _ := json.Marshal(data)
-	log.Printf("%s Commiting Write\n", zNode.NodeIp)
+
+	color.HiBlue("%s receive Commit Write from %s\n", zNode.NodeIp, clientPort)
+	color.HiBlue("%s Committing Write\n", zNode.NodeIp)
 	url := po.ab.BaseURL + ":" + zNode.NodeIp + "/writeMetadata"
 	_, err = po.ab.makeExternalRequest(nil, url, "POST", jsonData)
 	if err != nil {
-		log.Printf("Error Commiting Write: %s\n", err.Error())
+		color.Red("Error Commiting Write: %s\n", err.Error())
 	}
 }

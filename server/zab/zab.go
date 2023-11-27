@@ -75,7 +75,7 @@ func (ab *AtomicBroadcast) SetProposalState(proposalState ProposalState) {
 	ab.proposalMu.Lock()
 	defer ab.proposalMu.Unlock()
 	ab.proposalState = proposalState
-	log.Printf("Set ProposalState to %s\n", proposalState)
+	color.HiRed("Set ProposalState to %s\n", proposalState)
 }
 
 func NewAtomicBroadcast(dbPath string) *AtomicBroadcast {
@@ -154,28 +154,38 @@ func (ab *AtomicBroadcast) startProposal(data models.Data) {
 	jsonData, _ := json.Marshal(data)
 	zNode, _ := ab.ZTree.GetLocalMetadata()
 	portsSlice := strings.Split(zNode.Servers, ",")
+
+	// send Request async
+	var wg sync.WaitGroup
 	for _, port := range portsSlice {
-		if port != zNode.NodeIp {
-			log.Println("Proposing to Follower:", port)
+		if port == zNode.NodeIp {
+			continue
+		}
+
+		wg.Add(1)
+		go func(port string) {
+			defer wg.Done()
+
+			color.HiBlue("Leader %s proposing to Follower %s", zNode.NodeIp, port)
 			url := ab.BaseURL + ":" + port + "/proposeWrite"
 			_, err := ab.makeExternalRequest(nil, url, "POST", jsonData)
 			if err != nil {
-				log.Println("Error proposing to follower:", port, "Error:", err)
-				continue
+				color.Red("Error proposing to follower:", port, "Error:", err)
 			}
-		}
+		}(port)
 	}
+	wg.Wait()
 
 	// Wait for ACK before committing
 	for ab.ProposalState() != ACKNOWLEDGED {
 		time.Sleep(time.Second)
 	}
 
-	log.Println("Leader committing")
+	color.HiBlue("Leader %s committing", zNode.NodeIp)
 	url := ab.BaseURL + ":" + zNode.NodeIp + "/writeMetadata"
 	_, err := ab.makeExternalRequest(nil, url, "POST", jsonData)
 	if err != nil {
-		log.Println("Error committing write metadata:", err)
+		color.Red("Error committing write metadata:", err)
 	}
 	ab.SetProposalState(COMMITTED)
 }
@@ -201,12 +211,11 @@ func (ab *AtomicBroadcast) ListenForLeaderElection(port int, leader int) {
 		case errorData := <-ab.ErrorLeaderChan:
 			errorPortNumber, _ := strconv.Atoi(errorData.ErrorPort)
 			if errorPortNumber == leader || errorData.IsWakeup {
-				if errorPortNumber == leader {
-					color.Magenta("Error from port %d healthcheck! Starting leader election here...", errorPortNumber)
-				} else if errorData.IsWakeup {
-					color.Magenta("Port %d just woke up! Starting leader election here...", port)
+				if errorData.IsWakeup {
+					color.Cyan("%d joining, starting election", port)
+				} else if errorPortNumber == leader {
+					color.Cyan("Healthcheck timeout for %d, starting election", errorPortNumber)
 				}
-
 				ab.startLeaderElection(port)
 			}
 		}
@@ -215,7 +224,6 @@ func (ab *AtomicBroadcast) ListenForLeaderElection(port int, leader int) {
 
 // Starts the leader election by calling its own server handler with information of the port information.
 func (ab *AtomicBroadcast) startLeaderElection(currentPort int) {
-
 	client := &http.Client{}
 	portURL := fmt.Sprintf("%d", currentPort)
 
@@ -268,8 +276,8 @@ func (ab *AtomicBroadcast) declareLeaderRequest(portStr string, allServers []str
 }
 
 func (ab *AtomicBroadcast) syncMetadata(allServers []string) {
-	color.Yellow("Syncing Metadata")
 	zNode, _ := ab.ZTree.GetLocalMetadata()
+	color.Yellow("%s Syncing Metadata", zNode.NodeIp)
 	for _, outgoingPort := range allServers {
 		if outgoingPort != zNode.NodeIp {
 			url := fmt.Sprintf(ab.BaseURL + ":" + outgoingPort + "/syncMetadata")
