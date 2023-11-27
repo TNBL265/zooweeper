@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 )
 
@@ -95,7 +94,7 @@ func (ab *AtomicBroadcast) makeExternalRequest(w http.ResponseWriter, incomingUr
 
 	req, err := http.NewRequest(method, url, bytes.NewBuffer(jsonData))
 	if err != nil {
-		log.Println("Error creating request:", err)
+		//log.Println("Error creating request:", err)
 		ab.errorJSON(w, err, http.StatusBadRequest)
 		return nil, err
 	}
@@ -108,7 +107,7 @@ func (ab *AtomicBroadcast) makeExternalRequest(w http.ResponseWriter, incomingUr
 
 	res, err := client.Do(req)
 	if err != nil {
-		log.Println("Error sending request:", err)
+		//log.Println("Error sending request:", err)
 		//ab.errorJSON(w, err, http.StatusBadRequest)
 		return nil, err
 	}

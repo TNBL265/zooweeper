@@ -48,7 +48,6 @@ func (eo *ElectionOps) SelfElectLeaderRequest(portStr string) http.HandlerFunc {
 			eo.ab.errorJSON(w, err, http.StatusBadRequest)
 			return
 		}
-		color.Magenta("Received election message from Port:%s \n", requestPayload.IncomingPort)
 
 		incomingPortNumber, _ := strconv.Atoi(requestPayload.IncomingPort)
 		currentPortNumber, _ := strconv.Atoi(portStr)
@@ -78,11 +77,9 @@ func (eo *ElectionOps) SelfElectLeaderRequest(portStr string) http.HandlerFunc {
 				}
 				jsonData, _ := json.Marshal(electMessage)
 
-				req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
-				if err != nil {
-					log.Println(err)
-					continue
-				}
+				color.Cyan("%s sending Self-Elect to %s", portStr, outgoingPort)
+				req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+
 				req.Header.Add("Accept", "application/json")
 				req.Header.Add("Content-Type", "application/json")
 
@@ -93,20 +90,13 @@ func (eo *ElectionOps) SelfElectLeaderRequest(portStr string) http.HandlerFunc {
 				// CONNECTION
 				resp, err := client.Do(req)
 				if err != nil || resp == nil {
-					log.Println("Timeout issue!")
-					log.Println(err)
-					continue
-				} else if err != nil {
-					log.Println(err)
+					color.Red("Timeout from %s", outgoingPort)
 					continue
 				}
 
 				defer resp.Body.Close()
-				resBody, err := ioutil.ReadAll(resp.Body)
-				if err != nil {
-					log.Println(err)
-					continue
-				}
+				resBody, _ := ioutil.ReadAll(resp.Body)
+
 				var responseObject models.ElectLeaderResponse
 				err = json.Unmarshal(resBody, &responseObject)
 				if err != nil {
@@ -124,9 +114,9 @@ func (eo *ElectionOps) SelfElectLeaderRequest(portStr string) http.HandlerFunc {
 
 		}
 		if !hasFailedElection {
-			color.Green("Port %s has won election", portStr)
+			color.Cyan("%s won election", portStr)
 		} else {
-			color.Red("Port %s has lost election", portStr)
+			color.Cyan("%s lost election", portStr)
 		}
 
 		// Declare itself leader to all other nodes if node succeeds
@@ -141,15 +131,12 @@ func (eo *ElectionOps) SelfElectLeaderRequest(portStr string) http.HandlerFunc {
 // DeclareLeaderReceive send response to all other nodes that incoming port is a leader.
 func (eo *ElectionOps) DeclareLeaderReceive() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		//send information to all servers
 		var requestPayload models.DeclareLeaderRequest
 		err := eo.ab.readJSON(w, r, &requestPayload)
 		if err != nil {
 			eo.ab.errorJSON(w, err, http.StatusBadRequest)
 			return
 		}
-
-		color.Cyan("%s", requestPayload.IncomingPort)
 		eo.ab.ZTree.UpdateFirstLeader(requestPayload.IncomingPort)
 	}
 }

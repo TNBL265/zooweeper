@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/fatih/color"
 	"github.com/tnbl265/zooweeper/database/models"
-	"log"
 	"net/http"
 )
 
@@ -18,7 +17,7 @@ func (so *SyncOps) SyncRequestHandler(_ http.ResponseWriter, r *http.Request) {
 	zNode, _ := so.ab.ZTree.GetLocalMetadata()
 	clientPort := r.Header.Get("X-Sender-Port")
 	if clientPort != zNode.Leader {
-		log.Fatalf("I only supposed to receive Sync Request from leader not from %s\n", clientPort)
+		color.Red("I only supposed to receive Sync Request from leader not from %s\n", clientPort)
 	}
 	color.Yellow("Received SYNC Request from %s", clientPort)
 
