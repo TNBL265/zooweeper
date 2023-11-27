@@ -235,7 +235,7 @@ func (ab *AtomicBroadcast) startLeaderElection(currentPort int) {
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
-		log.Println(err)
+		//log.Println(err)
 	}
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("Content-Type", "application/json")
@@ -261,12 +261,13 @@ func (ab *AtomicBroadcast) declareLeaderRequest(portStr string, allServers []str
 
 		req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 		if err != nil {
-			log.Println(err)
+			//log.Println(err)
 			continue
 		}
 		req.Header.Add("Accept", "application/json")
 		req.Header.Add("Content-Type", "application/json")
 
+		color.Cyan("%s declare Leader to %s", portStr, outgoingPort)
 		resp, err := client.Do(req)
 		if err != nil {
 			continue

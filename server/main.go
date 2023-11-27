@@ -41,7 +41,7 @@ func main() {
 
 	// Start Server
 	server := ensemble.NewServer(port, leader, state, allServers, dbPath)
-	log.Printf("Starting Server (%s) on port %s\n", server.State(), portStr)
+	log.Printf("Starting Server on port %s\n", portStr)
 	defer func(connection *sql.DB) {
 		err := connection.Close()
 		if err != nil {
@@ -141,8 +141,8 @@ func ping(server *ensemble.Server) (string, error) {
 				}
 			}
 			if err != nil || resp == nil {
-				color.Red("Error sending ping:")
-				log.Println(err)
+				color.Red("Error sending ping to %s", otherPort)
+				//log.Println(err)
 
 				errorData := models.HealthCheckError{
 					Error:     err,
