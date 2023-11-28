@@ -1,13 +1,18 @@
 #!/bin/bash
 
-if [ -z "$1" ] || [ -z "$2" ]; then
+if [ -z "$1" ]; then
   echo "Usage: $0 <num_requests> <kafka-port> <other-clients>"
   exit 1
 fi
 
 num_requests=$1
-kafka_port=$2
-clients=$3
+
+# Kafka Server random choices
+ports=(9090 9091 9092)
+selected_port=${ports[$RANDOM % ${#ports[@]}]}
+
+kafka_port=${2:-$selected_port}
+clients=${3:-"9090,9091,9092"}
 
 base_url="http://localhost:$kafka_port/addScore"
 
