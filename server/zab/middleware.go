@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"container/heap"
 	"encoding/json"
+	"github.com/fatih/color"
 	"github.com/tnbl265/zooweeper/database/models"
 	"io"
 	"io/ioutil"
@@ -98,7 +99,7 @@ func (wo *WriteOps) WriteOpsMiddleware(next http.Handler) http.Handler {
 
 		if zNode.NodeIp != zNode.Leader {
 			// Follower will forward Request to Leader
-			log.Println("Forwarding request to leader")
+			color.HiBlue("%s forwarding request to leader %s", zNode.NodeIp, zNode.Leader)
 			resp, err := wo.ab.forwardRequestToLeader(r)
 			if err != nil {
 				// Handle error
