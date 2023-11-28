@@ -1,7 +1,7 @@
 package models
 
 type Metadata struct {
-	NodeId     string `json:"NodeId"`
+	NodeId     int    `json:"NodeId"`
 	NodeIp     string `json:"NodeIp"`
 	Leader     string `json:"Leader"`
 	Servers    string `json:"Servers"`
