@@ -61,15 +61,15 @@ func (zt *ZTree) GetLocalMetadata() (*models.Metadata, error) {
 	return &data, nil
 }
 
-func (zt *ZTree) parentProcessExist(senderIp string) (bool, error) {
-	sqlCheck := `SELECT COUNT(*) FROM ZNode WHERE SenderIp = ?`
-	var count int
-	err := zt.DB.QueryRow(sqlCheck, senderIp).Scan(&count)
+func (zt *ZTree) getParentNodeId(senderIp string) (int, error) {
+	sqlCheck := `SELECT NodeId FROM ZNode WHERE SenderIp = ?`
+	var nodeId int
+	err := zt.DB.QueryRow(sqlCheck, senderIp).Scan(&nodeId)
 	if err != nil {
-		log.Println("Error checking row existence:", err)
-		return false, err
+		// does not exist
+		return 0, err
 	}
-	return count > 0, nil
+	return nodeId, nil
 }
 
 func (zt *ZTree) insertParentProcessMetadata(metadata models.Metadata) error {
@@ -79,58 +79,80 @@ func (zt *ZTree) insertParentProcessMetadata(metadata models.Metadata) error {
 `
 	row, err := zt.DB.Prepare(sqlPartialInsert)
 	if err != nil {
-		log.Println("Error preparing row for partial insert:", err)
+		log.Println("Error prepare row for insertParentProcessMetadata:", err)
 		return err
 	}
 	defer row.Close()
 
 	_, err = row.Exec(
-		metadata.NodeIp, "", "", "", 0, 0, 1,
+		"", "", "", metadata.Timestamp, 0, 0, 1,
 		metadata.Clients, metadata.SenderIp, metadata.ReceiverIp,
 	)
 	if err != nil {
-		log.Println("Error executing partial insert:", err)
+		log.Println("Error exec for insertParentProcessMetadata:", err)
 		return err
 	}
 
 	return nil
 }
 
-func (zt *ZTree) checkSenderClientsMatch(senderIp, clients string) (bool, error) {
-	sqlCheck := `
-        SELECT COUNT(*) 
+func (zt *ZTree) checkSenderClientsMatch(senderIp, clients string) (int, bool, error) {
+	// First, find the highest NodeId for the given senderIp
+	sqlGetHighestNodeId := `
+        SELECT NodeId, Version 
         FROM ZNode 
-        WHERE SenderIp = ? AND Clients = ?
+        WHERE SenderIp = ?
+        ORDER BY NodeId DESC
+        LIMIT 1
     `
-	var count int
-	err := zt.DB.QueryRow(sqlCheck, senderIp, clients).Scan(&count)
+	var highestNodeId int
+	var version int
+
+	err := zt.DB.QueryRow(sqlGetHighestNodeId, senderIp).Scan(&highestNodeId, &version)
 	if err != nil {
-		log.Println("Error checking for matching SenderIp and Clients:", err)
-		return false, err
+		log.Println("Error finding highest NodeId for checkSenderClientsMatch:", err)
+		return 0, false, err
 	}
-	return count > 0, nil
+
+	if highestNodeId == 0 {
+		return 0, false, nil
+	}
+
+	// Second, check if the highest NodeId also matches the given clients
+	sqlCheckClients := `
+        SELECT 1
+        FROM ZNode 
+        WHERE NodeId = ? AND Clients = ?
+    `
+	var exists int
+	err = zt.DB.QueryRow(sqlCheckClients, highestNodeId, clients).Scan(&exists)
+	if err != nil {
+		return version, false, err
+	}
+
+	return version, true, nil
+
 }
 
-func (zt *ZTree) updateClients(senderIp, clients string) error {
-	sqlStatement := `
-        UPDATE ZNode 
-        SET Clients = $1, Version = Version + 1
-        where SenderIp = $2 AND parentId = 1
-    `
-	result, err := zt.DB.Exec(sqlStatement, clients, senderIp)
+func (zt *ZTree) updateProcessMetadata(metadata models.Metadata, parent, version int) error {
+	sqlPartialInsert := `
+	INSERT INTO ZNode (NodeIp, Leader, Servers, Timestamp, Attempts, Version, ParentId, Clients, SenderIp, ReceiverIp) 
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+`
+	row, err := zt.DB.Prepare(sqlPartialInsert)
 	if err != nil {
-		log.Println("Error updating Clients and Version columns:", err)
+		log.Println("Error preparing row for updateClients:", err)
 		return err
 	}
+	defer row.Close()
 
-	rowsAffected, err := result.RowsAffected()
+	_, err = row.Exec(
+		"", "", "", metadata.Timestamp, 0, version, parent,
+		metadata.Clients, metadata.SenderIp, metadata.ReceiverIp,
+	)
 	if err != nil {
-		log.Println("Error getting rows affected:", err)
+		log.Println("Error exec for updateClients:", err)
 		return err
-	}
-
-	if rowsAffected == 0 {
-		log.Println("No rows were updated. The table might be empty or the clients are the same as before.")
 	}
 
 	return nil
@@ -185,37 +207,13 @@ func (zt *ZTree) GetVersionBySenderIp(senderIp string) (int, error) {
 }
 
 func (zt *ZTree) UpdateMetadata(metadata models.Metadata) error {
-	var exists bool
-	checkSql := `SELECT EXISTS(SELECT 1 FROM ZNode WHERE SenderIp = ?)`
-	err := zt.DB.QueryRow(checkSql, metadata.SenderIp).Scan(&exists)
-	if err != nil {
-		log.Println("Error checking existence:", err)
-		return err
-	}
+	// TODO: Bug fix
+	parentId, _ := zt.getParentNodeId(metadata.SenderIp)
 
-	if exists {
-		// If exists, update existing
-		updateSql := `
-            UPDATE ZNode 
-            SET NodeIp = ?, Leader = ?, Servers = ?, Timestamp = ?, Attempts = ?, Version = ?, ParentId = ?, Clients = ?, ReceiverIp = ?
-            WHERE SenderIp = ?
-        `
-		_, err := zt.DB.Exec(updateSql, metadata.NodeIp, metadata.Leader, metadata.Servers, metadata.Timestamp, metadata.Attempts, metadata.Version, metadata.ParentId, metadata.Clients, metadata.ReceiverIp, metadata.SenderIp)
-		if err != nil {
-			log.Println("Error updating Metadata:", err)
-			return err
-		}
+	if parentId == -1 {
+		zt.updateProcessMetadata(metadata, 1, 1)
 	} else {
-		// Else, insert new
-		insertSql := `
-            INSERT INTO ZNode (NodeIp, Leader, Servers, Timestamp, Attempts, Version, ParentId, Clients, SenderIp, ReceiverIp)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `
-		_, err := zt.DB.Exec(insertSql, metadata.NodeIp, metadata.Leader, metadata.Servers, metadata.Timestamp, metadata.Attempts, metadata.Version, metadata.ParentId, metadata.Clients, metadata.SenderIp, metadata.ReceiverIp)
-		if err != nil {
-			log.Println("Error inserting new Metadata:", err)
-			return err
-		}
+		zt.insertParentProcessMetadata(metadata)
 	}
 
 	return nil

@@ -67,22 +67,18 @@ func (zt *ZTree) InsertMetadata(metadata models.Metadata, parentId int) error {
 }
 
 func (zt *ZTree) UpsertMetadata(metadata models.Metadata) error {
-	exists, err := zt.parentProcessExist(metadata.SenderIp)
-	if err != nil {
-		log.Println("Error checking entry existence:", err)
-		return err
-	}
+	nodeId, _ := zt.getParentNodeId(metadata.SenderIp)
 
-	if !exists {
+	if nodeId == 0 {
 		// Insert parent process with parentId=1 (direct child of Zookeeper)
-		err = zt.insertParentProcessMetadata(metadata)
+		err := zt.insertParentProcessMetadata(metadata)
 		if err != nil {
 			return err
 		}
 	} else {
-		sameClients, _ := zt.checkSenderClientsMatch(metadata.SenderIp, metadata.Clients)
-		if !sameClients {
-			err := zt.updateClients(metadata.SenderIp, metadata.Clients)
+		version, matched, _ := zt.checkSenderClientsMatch(metadata.SenderIp, metadata.Clients)
+		if !matched {
+			err := zt.updateProcessMetadata(metadata, nodeId, version+1)
 			if err != nil {
 				return err
 			}
