@@ -28,7 +28,6 @@ func main() {
 	}
 	port, _ := strconv.Atoi(portStr)
 
-	var state ensemble.ServerState
 	leader := 8082
 	allServers := []int{8080, 8081, 8082} //, 8083, 8084, 8085, 8086, 8087}
 
@@ -40,7 +39,7 @@ func main() {
 	}
 
 	// Start Server
-	server := ensemble.NewServer(port, leader, state, allServers, dbPath)
+	server := ensemble.NewServer(dbPath)
 	log.Printf("Starting Server on port %s\n", portStr)
 	defer func(connection *sql.DB) {
 		err := connection.Close()
