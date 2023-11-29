@@ -58,7 +58,7 @@ EOF
 minute=1
 
 for i in $(seq 1 "$num_requests"); do
-  # Zookeeper Server random choices
+  # ZooWeeper Server random choices
   receiver_ip=$((RANDOM % 3 + 8080))
   name=${names[$RANDOM % ${#names[@]}]}
   club=${clubs[$RANDOM % ${#clubs[@]}]}

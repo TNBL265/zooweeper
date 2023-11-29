@@ -20,14 +20,30 @@ func main() {
 	}
 	port, _ := strconv.Atoi(portStr)
 
-	leader := 8082
-	allServers := []int{8080, 8081, 8082} //, 8083, 8084, 8085, 8086, 8087}
+	startPortStr := os.Getenv("START_PORT")
+	if startPortStr == "" {
+		startPortStr = "8080"
+	}
+	startPort, _ := strconv.Atoi(startPortStr)
+
+	// Default local testing with 3 ZooWeeper servers
+	endPortStr := os.Getenv("END_PORT")
+	if endPortStr == "" {
+		endPortStr = "8082"
+	}
+	endPort, _ := strconv.Atoi(endPortStr)
+
+	leader := endPort
+	allServers := make([]int, 0, endPort-startPort+1)
+	for p := startPort; p <= endPort; p++ {
+		allServers = append(allServers, p)
+	}
 
 	var dbPath string
-	if port >= 8080 && port <= 8087 {
-		dbPath = fmt.Sprintf("ztree/zooweeper-metadata-%d.db", port-8080)
+	if port >= startPort && port <= endPort {
+		dbPath = fmt.Sprintf("ztree/zooweeper-metadata-%d.db", port-startPort)
 	} else {
-		log.Fatalf("Only support ports 8080 to 8087")
+		log.Fatalf("Only support ports %d to %d", startPort, endPort)
 	}
 
 	// Start Server
