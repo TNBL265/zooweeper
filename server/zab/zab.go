@@ -136,7 +136,7 @@ func (ab *AtomicBroadcast) syncMetadata() {
 			url := ab.BaseURL + ":" + port + "/syncRequest"
 			_, err := ab.makeExternalRequest(nil, url, "POST", jsonData)
 			if err != nil {
-				color.Red("Error syncRequest to:", port, "Error:", err)
+				color.Red("Error syncRequest to %s:", port, "Error:", err)
 			}
 		}(port)
 	}
@@ -153,7 +153,6 @@ func (ab *AtomicBroadcast) syncMetadata() {
 	}
 	jsonData, _ = json.Marshal(metadata)
 
-	// send Request async
 	for _, port := range portsSlice {
 		if port == zNode.NodeIp {
 			continue
