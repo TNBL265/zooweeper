@@ -23,7 +23,7 @@ func (po *ProposalOps) ProposeWrite(w http.ResponseWriter, r *http.Request) {
 	jsonData, _ := json.Marshal(data)
 
 	color.HiBlue("%s received Propose Write from %s\n", zNode.NodeIp, clientPort)
-	color.HiBlue("%s sending ACK to %s\n", zNode.NodeIp, clientPort)
+	color.HiBlue("%s sending proposalACK to %s\n", zNode.NodeIp, clientPort)
 	url := po.ab.BaseURL + ":" + zNode.Leader + "/acknowledgeProposal"
 	_, err = po.ab.makeExternalRequest(nil, url, "POST", jsonData)
 }
@@ -36,16 +36,18 @@ func (po *ProposalOps) AcknowledgeProposal(w http.ResponseWriter, r *http.Reques
 	}
 	color.HiBlue("Leader %s received ACK from Follower %s\n", zNode.NodeIp, clientPort)
 
+	// Wait for majority of Follower to ACK
+	portsSlice := strings.Split(zNode.Servers, ",")
+	majority := len(portsSlice) / 2
+
 	if po.ab.ProposalState() != ACKNOWLEDGED {
-		currentAckCount := po.ab.AckCounter()
-		currentAckCount++
-		po.ab.SetAckCounter(currentAckCount)
-		// Wait for majority of Follower to ACK
-		portsSlice := strings.Split(zNode.Servers, ",")
-		majority := len(portsSlice) / 2
 		for {
+			currentAckCount := po.ab.AckCounter()
+			currentAckCount++
+			po.ab.SetAckCounter(currentAckCount)
+
 			if currentAckCount > majority {
-				color.HiBlue("Leader %s received majority ACK, %d\n", zNode.NodeIp, currentAckCount)
+				color.HiBlue("Leader %s received majority proposalAck, %d\n", zNode.NodeIp, currentAckCount)
 				po.ab.SetAckCounter(0)
 				po.ab.SetProposalState(ACKNOWLEDGED)
 				break

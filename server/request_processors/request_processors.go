@@ -54,8 +54,10 @@ func (rp *RequestProcessor) Routes(portStr string) http.Handler {
 
 	// Data Sync Request
 	mux.Group(func(r chi.Router) {
-		r.Post("/syncMetadata", rp.Zab.Sync.SyncRequestHandler)
-		r.Post("/updateMetadata", rp.Zab.Sync.SyncMetadataHandler)
+		r.Post("/syncRequest", rp.Zab.Sync.SyncRequestHandler)
+		r.Post("/syncResponse", rp.Zab.Sync.SyncResponseHandler)
+		r.Post("/requestMetadata", rp.Zab.Sync.RequestMetadataHandler)
+		r.Post("/updateMetadata", rp.Zab.Sync.UpdateMetadataHandler)
 	})
 
 	return mux

@@ -2,12 +2,131 @@ package zooweeper
 
 import (
 	"bytes"
+	"container/heap"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/fatih/color"
+	"github.com/tnbl265/zooweeper/database/handlers"
+	"github.com/tnbl265/zooweeper/database/models"
 	"io"
+	"log"
 	"net/http"
+	"os"
 )
+
+func (ab *AtomicBroadcast) AckCounter() int {
+	ab.proposalMu.Lock()
+	defer ab.proposalMu.Unlock()
+	return ab.ackCounter
+}
+
+func (ab *AtomicBroadcast) SetAckCounter(ackCounter int) {
+	ab.proposalMu.Lock()
+	defer ab.proposalMu.Unlock()
+	ab.ackCounter = ackCounter
+}
+
+func (ab *AtomicBroadcast) ProposalState() ProposalState {
+	ab.proposalMu.Lock()
+	defer ab.proposalMu.Unlock()
+	return ab.proposalState
+}
+
+func (ab *AtomicBroadcast) SetProposalState(proposalState ProposalState) {
+	ab.proposalMu.Lock()
+	defer ab.proposalMu.Unlock()
+	ab.proposalState = proposalState
+	color.HiRed("Set ProposalState to %s\n", proposalState)
+}
+
+func (ab *AtomicBroadcast) SyncCounter() int {
+	ab.syncMu.Lock()
+	defer ab.syncMu.Unlock()
+	return ab.syncCounter
+}
+
+func (ab *AtomicBroadcast) SetSyncCounter(syncCounter int) {
+	ab.syncMu.Lock()
+	defer ab.syncMu.Unlock()
+	ab.syncCounter = syncCounter
+}
+
+func (ab *AtomicBroadcast) SyncState() SyncState {
+	ab.syncMu.Lock()
+	defer ab.syncMu.Unlock()
+	return ab.syncState
+}
+
+func (ab *AtomicBroadcast) SetSyncState(syncState SyncState) {
+	ab.syncMu.Lock()
+	defer ab.syncMu.Unlock()
+	ab.syncState = syncState
+	color.HiRed("Set SyncState to %s\n", syncState)
+}
+
+func NewAtomicBroadcast(dbPath string) *AtomicBroadcast {
+	ab := &AtomicBroadcast{}
+	baseURL := os.Getenv("BASE_URL")
+	if baseURL == "" {
+		baseURL = "http://localhost"
+	}
+	ab.BaseURL = baseURL
+
+	// Connect to the Database
+	log.Println("Connecting to", dbPath)
+	db, err := ab.OpenDB(dbPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	ab.ZTree = &handlers.ZTree{DB: db}
+	ab.Read.ab = ab
+	ab.Write.ab = ab
+	ab.Proposal.ab = ab
+	ab.Election.ab = ab
+	ab.Sync.ab = ab
+
+	ab.proposalState = COMMITTED
+
+	ab.ErrorLeaderChan = make(chan models.HealthCheckError)
+
+	ab.pq = make(PriorityQueue, 0)
+	heap.Init(&ab.pq)
+
+	ab.ZTree.InitializeDB()
+	return ab
+}
+
+func (ab *AtomicBroadcast) OpenDB(datasource string) (*sql.DB, error) {
+	db, err := sql.Open("sqlite3", datasource)
+	if err != nil {
+		return nil, err
+	}
+
+	err = db.Ping()
+	if err != nil {
+		return nil, err
+	}
+
+	return db, nil
+}
+
+func (ab *AtomicBroadcast) CreateMetadata(w http.ResponseWriter, r *http.Request) models.Data {
+	var requestPayload models.Data
+
+	err := ab.readJSON(w, r, &requestPayload)
+	if err != nil {
+		ab.errorJSON(w, err, http.StatusBadRequest)
+		return models.Data{}
+	}
+	data := models.Data{
+		Timestamp:   requestPayload.Timestamp,
+		Metadata:    requestPayload.Metadata,
+		GameResults: requestPayload.GameResults,
+	}
+	return data
+}
 
 func (ab *AtomicBroadcast) EnableCORS(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -4,33 +4,36 @@ package zooweeper
 
 import (
 	"bytes"
-	"container/heap"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"github.com/fatih/color"
-	"log"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	ztree "github.com/tnbl265/zooweeper/database"
-	"github.com/tnbl265/zooweeper/database/handlers"
 	"github.com/tnbl265/zooweeper/database/models"
 )
 
 type ProposalState string
 
-var err error
-
 const (
-	COMMITTED    ProposalState = "COMMITTED"
 	PROPOSED     ProposalState = "PROPOSED"
 	ACKNOWLEDGED ProposalState = "ACKNOWLEDGED"
+	COMMITTED    ProposalState = "COMMITTED"
 )
+
+type SyncState string
+
+const (
+	PREPARED SyncState = "PREPARED"
+	ACKED    SyncState = "ACKED"
+	SYNCED   SyncState = "SYNCED"
+)
+
+var err error
 
 type AtomicBroadcast struct {
 	BaseURL string
@@ -48,96 +51,14 @@ type AtomicBroadcast struct {
 	proposalState ProposalState
 	proposalMu    sync.Mutex
 
+	// DataSync
+	syncCounter int
+	syncState   SyncState
+	syncMu      sync.Mutex
+
 	pq PriorityQueue
 
 	ErrorLeaderChan chan models.HealthCheckError
-}
-
-func (ab *AtomicBroadcast) AckCounter() int {
-	ab.proposalMu.Lock()
-	defer ab.proposalMu.Unlock()
-	return ab.ackCounter
-}
-
-func (ab *AtomicBroadcast) SetAckCounter(ackCounter int) {
-	ab.proposalMu.Lock()
-	defer ab.proposalMu.Unlock()
-	ab.ackCounter = ackCounter
-}
-
-func (ab *AtomicBroadcast) ProposalState() ProposalState {
-	ab.proposalMu.Lock()
-	defer ab.proposalMu.Unlock()
-	return ab.proposalState
-}
-
-func (ab *AtomicBroadcast) SetProposalState(proposalState ProposalState) {
-	ab.proposalMu.Lock()
-	defer ab.proposalMu.Unlock()
-	ab.proposalState = proposalState
-	color.HiRed("Set ProposalState to %s\n", proposalState)
-}
-
-func NewAtomicBroadcast(dbPath string) *AtomicBroadcast {
-	ab := &AtomicBroadcast{}
-	baseURL := os.Getenv("BASE_URL")
-	if baseURL == "" {
-		baseURL = "http://localhost"
-	}
-	ab.BaseURL = baseURL
-
-	// Connect to the Database
-	log.Println("Connecting to", dbPath)
-	db, err := ab.OpenDB(dbPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	ab.ZTree = &handlers.ZTree{DB: db}
-	ab.Read.ab = ab
-	ab.Write.ab = ab
-	ab.Proposal.ab = ab
-	ab.Election.ab = ab
-	ab.Sync.ab = ab
-
-	ab.proposalState = COMMITTED
-
-	ab.ErrorLeaderChan = make(chan models.HealthCheckError)
-
-	ab.pq = make(PriorityQueue, 0)
-	heap.Init(&ab.pq)
-
-	ab.ZTree.InitializeDB()
-	return ab
-}
-
-func (ab *AtomicBroadcast) OpenDB(datasource string) (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", datasource)
-	if err != nil {
-		return nil, err
-	}
-
-	err = db.Ping()
-	if err != nil {
-		return nil, err
-	}
-
-	return db, nil
-}
-
-func (ab *AtomicBroadcast) CreateMetadata(w http.ResponseWriter, r *http.Request) models.Data {
-	var requestPayload models.Data
-
-	err := ab.readJSON(w, r, &requestPayload)
-	if err != nil {
-		ab.errorJSON(w, err, http.StatusBadRequest)
-		return models.Data{}
-	}
-	data := models.Data{
-		Timestamp:   requestPayload.Timestamp,
-		Metadata:    requestPayload.Metadata,
-		GameResults: requestPayload.GameResults,
-	}
-	return data
 }
 
 func (ab *AtomicBroadcast) forwardRequestToLeader(r *http.Request) (*http.Response, error) {
@@ -188,6 +109,66 @@ func (ab *AtomicBroadcast) startProposal(data models.Data) {
 		color.Red("Error committing write metadata:", err)
 	}
 	ab.SetProposalState(COMMITTED)
+}
+
+// syncMetadata for new leader to sync its transaction log
+func (ab *AtomicBroadcast) syncMetadata() {
+	ab.SetSyncState(PREPARED)
+
+	zNode, _ := ab.ZTree.GetLocalMetadata()
+	portsSlice := strings.Split(zNode.Servers, ",")
+
+	var metadata models.Metadata
+	jsonData, _ := json.Marshal(metadata)
+
+	// send Request async
+	var wg sync.WaitGroup
+	for _, port := range portsSlice {
+		if port == zNode.NodeIp {
+			continue
+		}
+
+		wg.Add(1)
+		go func(port string) {
+			defer wg.Done()
+
+			color.Yellow("%s send syncRequest to %s", zNode.NodeIp, port)
+			url := ab.BaseURL + ":" + port + "/syncRequest"
+			_, err := ab.makeExternalRequest(nil, url, "POST", jsonData)
+			if err != nil {
+				color.Red("Error syncRequest to:", port, "Error:", err)
+			}
+		}(port)
+	}
+	wg.Wait()
+
+	// Wait for ACK before request Metadata
+	for ab.SyncState() != ACKED {
+		time.Sleep(time.Second)
+	}
+
+	highestZNodeId, _ := ab.ZTree.GetHighestZNodeId()
+	metadata = models.Metadata{
+		NodeId: highestZNodeId,
+	}
+	jsonData, _ = json.Marshal(metadata)
+
+	// send Request async
+	for _, port := range portsSlice {
+		if port == zNode.NodeIp {
+			continue
+		}
+
+		color.Yellow("%s requestMetadata from %s", zNode.NodeIp, port)
+		url := ab.BaseURL + ":" + port + "/requestMetadata"
+		_, err := ab.makeExternalRequest(nil, url, "POST", jsonData)
+		if err != nil {
+			color.Red("Error requestMetadata to:", port, "Error:", err)
+		}
+	}
+
+	color.Yellow("%s finished syncing", zNode.NodeIp)
+	ab.SetSyncState(SYNCED)
 }
 
 func (ab *AtomicBroadcast) WakeupLeaderElection(port int) {
@@ -273,20 +254,5 @@ func (ab *AtomicBroadcast) declareLeaderRequest(portStr string, allServers []str
 			continue
 		}
 		defer resp.Body.Close()
-	}
-}
-
-func (ab *AtomicBroadcast) syncMetadata(allServers []string) {
-	zNode, _ := ab.ZTree.GetLocalMetadata()
-	color.Yellow("%s Syncing Metadata", zNode.NodeIp)
-	for _, outgoingPort := range allServers {
-		if outgoingPort != zNode.NodeIp {
-			url := fmt.Sprintf(ab.BaseURL + ":" + outgoingPort + "/syncMetadata")
-
-			var metadataList models.Metadatas
-			jsonData, _ := json.Marshal(metadataList)
-
-			_, err = ab.makeExternalRequest(nil, url, "POST", jsonData)
-		}
 	}
 }
