@@ -9,7 +9,7 @@ type ReadOps struct {
 }
 
 func (ro *ReadOps) GetAllMetadata(w http.ResponseWriter, r *http.Request) {
-	// connect to the database.
+	// connect to the ztree.
 	results, err := ro.ab.ZTree.AllMetadata()
 	// return results
 	err = ro.ab.writeJSON(w, http.StatusOK, results)

@@ -1,9 +1,7 @@
-package zooweeper
+package ztree
 
 import (
 	"database/sql"
-
-	"github.com/tnbl265/zooweeper/database/models"
 )
 
 type ZNodeHandler interface {
@@ -12,16 +10,16 @@ type ZNodeHandler interface {
 	InitializeDB()
 
 	// Getter
-	AllMetadata() ([]*models.Metadata, error)
+	AllMetadata() ([]*Metadata, error)
 	ZNodeIdExists(nodeId int) (bool, error)
 	GetHighestZNodeId() (int, error)
-	GetLocalMetadata() (*models.Metadata, error)
-	GetMetadatasGreaterThanZNodeId(highestZNodeId int) (models.Metadatas, error)
+	GetLocalMetadata() (*Metadata, error)
+	GetMetadatasGreaterThanZNodeId(highestZNodeId int) (Metadatas, error)
 	GetClients(client string) ([]string, error)
 
 	// Setter
-	InsertMetadata(metadata models.Metadata) error
-	UpsertMetadata(metadata models.Metadata) error
-	InsertMetadataWithParentId(metadata models.Metadata, parentId int) error
+	InsertMetadata(metadata Metadata) error
+	UpsertMetadata(metadata Metadata) error
+	InsertMetadataWithParentId(metadata Metadata, parentId int) error
 	UpdateFirstLeader(Leader string) error
 }

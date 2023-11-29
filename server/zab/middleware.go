@@ -5,7 +5,7 @@ import (
 	"container/heap"
 	"encoding/json"
 	"github.com/fatih/color"
-	"github.com/tnbl265/zooweeper/database/models"
+	"github.com/tnbl265/zooweeper/request_processors/data"
 	"io"
 	"io/ioutil"
 	"log"
@@ -61,7 +61,7 @@ func (ab *AtomicBroadcast) QueueMiddleware(next http.Handler) http.Handler {
 			}
 
 			// Decode the body into the struct
-			var data models.Data
+			var data data.Data
 			err = json.Unmarshal(body, &data)
 			if err != nil {
 				return "", err

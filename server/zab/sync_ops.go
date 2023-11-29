@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/fatih/color"
-	"github.com/tnbl265/zooweeper/database/models"
+	"github.com/tnbl265/zooweeper/ztree"
 	"log"
 	"net/http"
 	"strings"
@@ -21,7 +21,7 @@ func (so *SyncOps) SyncRequestHandler(_ http.ResponseWriter, r *http.Request) {
 	clientPort := r.Header.Get("X-Sender-Port")
 
 	highestZNodeId, _ := so.ab.ZTree.GetHighestZNodeId()
-	var metadata = &models.Metadata{
+	var metadata = &ztree.Metadata{
 		NodeId: highestZNodeId,
 	}
 	jsonData, _ := json.Marshal(metadata)
@@ -37,7 +37,7 @@ func (so *SyncOps) SyncResponseHandler(w http.ResponseWriter, r *http.Request) {
 	zNode, _ := so.ab.ZTree.GetLocalMetadata()
 	clientPort := r.Header.Get("X-Sender-Port")
 
-	var requestPayload models.Metadata
+	var requestPayload ztree.Metadata
 	so.ab.readJSON(w, r, &requestPayload)
 
 	color.Yellow("%s received SyncResponse with highestZNodeId %d from %s", zNode.NodeIp, requestPayload.NodeId, clientPort)
@@ -70,7 +70,7 @@ func (so *SyncOps) RequestMetadataHandler(w http.ResponseWriter, r *http.Request
 	zNode, _ := so.ab.ZTree.GetLocalMetadata()
 	clientPort := r.Header.Get("X-Sender-Port")
 
-	var requestPayload models.Metadata
+	var requestPayload ztree.Metadata
 	so.ab.readJSON(w, r, &requestPayload)
 
 	highestZNodeId := requestPayload.NodeId
@@ -89,7 +89,7 @@ func (so *SyncOps) UpdateMetadataHandler(w http.ResponseWriter, r *http.Request)
 	zNode, _ := so.ab.ZTree.GetLocalMetadata()
 	clientPort := r.Header.Get("X-Sender-Port")
 
-	var metadatas models.Metadatas
+	var metadatas ztree.Metadatas
 	so.ab.readJSON(w, r, &metadatas)
 
 	color.Yellow("%s received updated Metadata from %s", zNode.NodeIp, clientPort)

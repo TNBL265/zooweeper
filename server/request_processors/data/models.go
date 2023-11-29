@@ -1,6 +1,8 @@
-package zooweeper
+package data
 
-import "github.com/tnbl265/zooweeper/ztree/models"
+import (
+	"github.com/tnbl265/zooweeper/ztree"
+)
 
 type GameResults struct {
 	Minute int    `json:"Minute"`
@@ -10,9 +12,9 @@ type GameResults struct {
 }
 
 type Data struct {
-	Timestamp   string          `json:"Timestamp"`
-	Metadata    models.Metadata `json:"Metadata"`
-	GameResults GameResults     `json:"GameResults"`
+	Timestamp   string         `json:"Timestamp"`
+	Metadata    ztree.Metadata `json:"Metadata"`
+	GameResults GameResults    `json:"GameResults"`
 }
 
 type HealthCheck struct {
