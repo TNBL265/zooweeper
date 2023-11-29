@@ -2,7 +2,7 @@ package ztree
 
 type Metadata struct {
 	NodeId     int    `json:"NodeId"`
-	NodeIp     string `json:"NodeIp"`
+	NodePort   string `json:"NodePort"`
 	Leader     string `json:"Leader"`
 	Servers    string `json:"Servers"`
 	Timestamp  string `json:"Timestamp"`

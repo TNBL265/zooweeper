@@ -44,7 +44,7 @@ type AtomicBroadcast struct {
 	Election ElectionOps
 	Sync     SyncOps
 
-	ZTree ztree.ZNodeHandler
+	ZTree ztree.ZNodeHandlers
 
 	// Proposal
 	ackCounter    int
@@ -79,7 +79,7 @@ func (ab *AtomicBroadcast) startProposal(data data.Data) {
 	// send Request async
 	var wg sync.WaitGroup
 	for _, port := range portsSlice {
-		if port == zNode.NodeIp {
+		if port == zNode.NodePort {
 			continue
 		}
 
@@ -87,7 +87,7 @@ func (ab *AtomicBroadcast) startProposal(data data.Data) {
 		go func(port string) {
 			defer wg.Done()
 
-			color.HiBlue("Leader %s proposing to Follower %s", zNode.NodeIp, port)
+			color.HiBlue("Leader %s proposing to Follower %s", zNode.NodePort, port)
 			url := ab.BaseURL + ":" + port + "/proposeWrite"
 			_, err := ab.makeExternalRequest(nil, url, "POST", jsonData)
 			if err != nil {
@@ -102,8 +102,8 @@ func (ab *AtomicBroadcast) startProposal(data data.Data) {
 		time.Sleep(time.Second)
 	}
 
-	color.HiBlue("Leader %s committing", zNode.NodeIp)
-	url := ab.BaseURL + ":" + zNode.NodeIp + "/writeMetadata"
+	color.HiBlue("Leader %s committing", zNode.NodePort)
+	url := ab.BaseURL + ":" + zNode.NodePort + "/writeMetadata"
 	_, err := ab.makeExternalRequest(nil, url, "POST", jsonData)
 	if err != nil {
 		color.Red("Error committing write metadata:", err)
@@ -124,7 +124,7 @@ func (ab *AtomicBroadcast) syncMetadata() {
 	// send Request async
 	var wg sync.WaitGroup
 	for _, port := range portsSlice {
-		if port == zNode.NodeIp {
+		if port == zNode.NodePort {
 			continue
 		}
 
@@ -132,7 +132,7 @@ func (ab *AtomicBroadcast) syncMetadata() {
 		go func(port string) {
 			defer wg.Done()
 
-			color.Yellow("%s send syncRequest to %s", zNode.NodeIp, port)
+			color.Yellow("%s send syncRequest to %s", zNode.NodePort, port)
 			url := ab.BaseURL + ":" + port + "/syncRequest"
 			_, err := ab.makeExternalRequest(nil, url, "POST", jsonData)
 			if err != nil {
@@ -154,11 +154,11 @@ func (ab *AtomicBroadcast) syncMetadata() {
 	jsonData, _ = json.Marshal(metadata)
 
 	for _, port := range portsSlice {
-		if port == zNode.NodeIp {
+		if port == zNode.NodePort {
 			continue
 		}
 
-		color.Yellow("%s requestMetadata from %s", zNode.NodeIp, port)
+		color.Yellow("%s requestMetadata from %s", zNode.NodePort, port)
 		url := ab.BaseURL + ":" + port + "/requestMetadata"
 		_, err := ab.makeExternalRequest(nil, url, "POST", jsonData)
 		if err != nil {
@@ -166,7 +166,7 @@ func (ab *AtomicBroadcast) syncMetadata() {
 		}
 	}
 
-	color.Yellow("%s finished syncing", zNode.NodeIp)
+	color.Yellow("%s finished syncing", zNode.NodePort)
 	ab.SetSyncState(SYNCED)
 }
 

@@ -97,9 +97,9 @@ func (wo *WriteOps) WriteOpsMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		if zNode.NodeIp != zNode.Leader {
+		if zNode.NodePort != zNode.Leader {
 			// Follower will forward Request to Leader
-			color.HiBlue("%s forwarding request to leader %s", zNode.NodeIp, zNode.Leader)
+			color.HiBlue("%s forwarding request to leader %s", zNode.NodePort, zNode.Leader)
 			resp, err := wo.ab.forwardRequestToLeader(r)
 			if err != nil {
 				// Handle error

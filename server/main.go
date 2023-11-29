@@ -83,9 +83,9 @@ func initZNode(server *ensemble.Server, port, leader int, allServers []int) {
 	allServersStr := strings.Join(result, ",")
 
 	metadata := ztree.Metadata{
-		NodeIp:  strconv.Itoa(port),
-		Leader:  strconv.Itoa(leader),
-		Servers: allServersStr,
+		NodePort: strconv.Itoa(port),
+		Leader:   strconv.Itoa(leader),
+		Servers:  allServersStr,
 	}
 	server.Rp.Zab.ZTree.InsertMetadataWithParentId(metadata, 0)
 }
@@ -100,7 +100,7 @@ func ping(server *ensemble.Server) (string, error) {
 	for {
 		time.Sleep(time.Second * time.Duration(PING_TIMEOUT))
 		zNode, _ := server.Rp.Zab.ZTree.GetLocalMetadata()
-		currentPort := zNode.NodeIp
+		currentPort := zNode.NodePort
 		//startTime := time.Now()
 
 		var healthCheck = data.HealthCheck{
@@ -124,7 +124,7 @@ func ping(server *ensemble.Server) (string, error) {
 			}
 			req.Header.Add("Accept", "application/json")
 			req.Header.Add("Content-Type", "application/json")
-			req.Header.Add("X-Sender-Port", zNode.NodeIp)
+			req.Header.Add("X-Sender-Port", zNode.NodePort)
 
 			color.Green("Ping %s", otherPort)
 
