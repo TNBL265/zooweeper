@@ -1,4 +1,19 @@
-package zooweeper
+// Package request_processors implements the Request Processor for our ZooWeeper components. We make use of HTTP Protocol
+//
+// 1. Read Request will be handled locally (no middleware)
+// 2. Write Request will be forwarded to Leader node
+// - QueueMiddleware helps to establish a form of Total Order to guarantee FIFO client order and Linearization writes
+// - WriteMiddleware:
+//   - Follower: forward request to Leader
+//   - Leader: start write proposal for as a classic two-phase commit
+//
+// 3. We also define other internal requests for some Distributed System features:
+// - Proposal Request for Data Synchronization when all ZooWeeper servers are healthy
+// - Leader Election Request: Distributed Coordination
+// - Data Sync Request for Data Synchronization when a ZooWeeper server joined or restarted
+//
+// Reference: Active Messaging in https://zookeeper.apache.org/doc/current/zookeeperInternals.html
+package request_processors
 
 import (
 	"net/http"
@@ -26,7 +41,6 @@ func (rp *RequestProcessor) Routes(portStr string) http.Handler {
 
 	// Read Request
 	mux.Group(func(r chi.Router) {
-		r.Post("/", rp.Zab.Election.Ping(portStr))
 		r.Get("/metadata", rp.Zab.Read.GetAllMetadata)
 	})
 
@@ -48,6 +62,7 @@ func (rp *RequestProcessor) Routes(portStr string) http.Handler {
 
 	// Leader Election Request
 	mux.Group(func(r chi.Router) {
+		r.Post("/", rp.Zab.Election.Ping(portStr))
 		r.Post("/electLeader", rp.Zab.Election.SelfElectLeaderRequest(portStr))
 		r.Post("/declareLeaderReceive", rp.Zab.Election.DeclareLeaderReceive())
 	})

@@ -1,3 +1,8 @@
+// Package data defines json schema for data of POST request
+//
+// 1. External POST request: from client (Kafka-Server) to query/update Metadata
+// 2. Internal POST request: from ZooWeeper servers for HealthCheck and LeaderElection
+
 package data
 
 import (
