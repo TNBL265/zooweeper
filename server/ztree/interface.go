@@ -1,4 +1,4 @@
-// Package ztree implements the Replicated Database for our ZooWeeper components
+// Package ztree implements the Replicated Database component for our ZooWeeper.
 //
 // 1. Instead of using the filesystem, we implemented the data model and hierarchical namespace using sqlite
 // - each row is a ZNode storing Metadata
@@ -42,8 +42,8 @@ type ZNodeHandlers interface {
 	GetClients(client string) ([]string, error)
 
 	// Setter
+	InsertFirstMetadata(metadata Metadata) error
 	InsertMetadata(metadata Metadata) error
-	UpsertMetadata(metadata Metadata) error
-	InsertMetadataWithParentId(metadata Metadata, parentId int) error
+	InsertMetadataWithParent(metadata Metadata) error
 	UpdateFirstLeader(Leader string) error
 }

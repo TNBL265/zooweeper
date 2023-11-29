@@ -1,4 +1,4 @@
-package zooweeper
+package zab
 
 import (
 	"encoding/json"
@@ -8,10 +8,12 @@ import (
 	"time"
 )
 
+// ProposalOps for 2PC of Write Request (Ref: Active Messaging in https://zookeeper.apache.org/doc/current/zookeeperInternals.html)
 type ProposalOps struct {
 	ab *AtomicBroadcast
 }
 
+// ProposeWrite handler on Follower nodes to ACK upon receive
 func (po *ProposalOps) ProposeWrite(w http.ResponseWriter, r *http.Request) {
 	zNode, _ := po.ab.ZTree.GetLocalMetadata()
 	clientPort := r.Header.Get("X-Sender-Port")
@@ -19,15 +21,16 @@ func (po *ProposalOps) ProposeWrite(w http.ResponseWriter, r *http.Request) {
 		color.Red("I only supposed to receive Propose Write from leader not from %s\n", clientPort)
 	}
 
-	data := po.ab.CreateMetadata(w, r)
+	data := po.ab.CreateMetadataFromPayload(w, r)
 	jsonData, _ := json.Marshal(data)
 
 	color.HiBlue("%s received Propose Write from %s\n", zNode.NodePort, clientPort)
 	color.HiBlue("%s sending proposalACK to %s\n", zNode.NodePort, clientPort)
 	url := po.ab.BaseURL + ":" + zNode.Leader + "/acknowledgeProposal"
-	_, err = po.ab.makeExternalRequest(nil, url, "POST", jsonData)
+	_, err = po.ab.sendRequest(url, "POST", jsonData)
 }
 
+// AcknowledgeProposal handler on Leader node to wait for majority ACK before commit
 func (po *ProposalOps) AcknowledgeProposal(w http.ResponseWriter, r *http.Request) {
 	zNode, _ := po.ab.ZTree.GetLocalMetadata()
 	clientPort := r.Header.Get("X-Sender-Port")
@@ -58,29 +61,30 @@ func (po *ProposalOps) AcknowledgeProposal(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	data := po.ab.CreateMetadata(w, r)
+	data := po.ab.CreateMetadataFromPayload(w, r)
 	jsonData, _ := json.Marshal(data)
 
 	color.HiBlue("Leader %s asking Follower %s to commit\n", zNode.NodePort, clientPort)
 	url := po.ab.BaseURL + ":" + clientPort + "/commitWrite"
-	_, err = po.ab.makeExternalRequest(nil, url, "POST", jsonData)
+	_, err = po.ab.sendRequest(url, "POST", jsonData)
 	if err != nil {
 		color.HiBlue("Error Asking Follower %s to commit: %s\n", clientPort, err.Error())
 	}
 
 }
 
+// CommitWrite handler on Follower nodes to commit upon receive
 func (po *ProposalOps) CommitWrite(w http.ResponseWriter, r *http.Request) {
 	zNode, _ := po.ab.ZTree.GetLocalMetadata()
 	clientPort := r.Header.Get("X-Sender-Port")
 
-	data := po.ab.CreateMetadata(w, r)
+	data := po.ab.CreateMetadataFromPayload(w, r)
 	jsonData, _ := json.Marshal(data)
 
 	color.HiBlue("%s receive Commit Write from %s\n", zNode.NodePort, clientPort)
 	color.HiBlue("%s Committing Write\n", zNode.NodePort)
 	url := po.ab.BaseURL + ":" + zNode.NodePort + "/writeMetadata"
-	_, err = po.ab.makeExternalRequest(nil, url, "POST", jsonData)
+	_, err = po.ab.sendRequest(url, "POST", jsonData)
 	if err != nil {
 		color.Red("Error Commiting Write: %s\n", err.Error())
 	}

@@ -1,4 +1,4 @@
-package zooweeper
+package zab
 
 import (
 	"bytes"
@@ -13,11 +13,13 @@ import (
 	"time"
 )
 
+// RequestItem with Timestamp field for ordering in PriorityQueue
 type RequestItem struct {
 	Request   *http.Request
 	Timestamp string
 }
 
+// PriorityQueue of RequestItem to be used by QueueMiddleware
 type PriorityQueue []*RequestItem
 
 func (pq PriorityQueue) Len() int { return len(pq) }
@@ -50,6 +52,7 @@ func (pq *PriorityQueue) Peek() *RequestItem {
 	return (*pq)[0]
 }
 
+// QueueMiddleware to order RequestItem using PriorityQueue
 func (ab *AtomicBroadcast) QueueMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Extract the timestamp
@@ -89,7 +92,8 @@ func (ab *AtomicBroadcast) QueueMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func (wo *WriteOps) WriteOpsMiddleware(next http.Handler) http.Handler {
+// WriteOpsMiddleware to establish some form of Total Order for RequestItem using PriorityQueue
+func (wo *WriteOps) WriteOpsMiddleware(http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		zNode, err := wo.ab.ZTree.GetLocalMetadata()
 		if err != nil {
@@ -119,7 +123,7 @@ func (wo *WriteOps) WriteOpsMiddleware(next http.Handler) http.Handler {
 			return
 		} else {
 			// Leader will Propose, wait for Acknowledge, before Commit
-			data := wo.ab.CreateMetadata(w, r)
+			data := wo.ab.CreateMetadataFromPayload(w, r)
 			for wo.ab.ProposalState() != COMMITTED {
 				// Propose in sequence to ensure Linearization Write
 				time.Sleep(time.Second)

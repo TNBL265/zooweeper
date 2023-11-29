@@ -1,4 +1,4 @@
-package zooweeper
+package zab
 
 import (
 	"bytes"
@@ -66,6 +66,7 @@ func (ab *AtomicBroadcast) SetSyncState(syncState SyncState) {
 	color.HiRed("Set SyncState to %s\n", syncState)
 }
 
+// NewAtomicBroadcast self-reference to parent - ref: https://stackoverflow.com/questions/27918208/go-get-parent-struct
 func NewAtomicBroadcast(dbPath string) *AtomicBroadcast {
 	ab := &AtomicBroadcast{}
 	baseURL := os.Getenv("BASE_URL")
@@ -112,14 +113,11 @@ func (ab *AtomicBroadcast) OpenDB(datasource string) (*sql.DB, error) {
 	return db, nil
 }
 
-func (ab *AtomicBroadcast) CreateMetadata(w http.ResponseWriter, r *http.Request) data.Data {
+func (ab *AtomicBroadcast) CreateMetadataFromPayload(w http.ResponseWriter, r *http.Request) data.Data {
 	var requestPayload data.Data
 
-	err := ab.readJSON(w, r, &requestPayload)
-	if err != nil {
-		ab.errorJSON(w, err, http.StatusBadRequest)
-		return data.Data{}
-	}
+	ab.readJSON(w, r, &requestPayload)
+
 	data := data.Data{
 		Timestamp:   requestPayload.Timestamp,
 		Metadata:    requestPayload.Metadata,
@@ -193,30 +191,11 @@ func (ab *AtomicBroadcast) readJSON(w http.ResponseWriter, r *http.Request, data
 	return nil
 }
 
-func (ab *AtomicBroadcast) errorJSON(w http.ResponseWriter, err error, status ...int) error {
-	statusCode := http.StatusBadRequest
-
-	if len(status) > 0 {
-		statusCode = status[0]
-	}
-
-	var payload JSONResponse
-	payload.Error = true
-	payload.Message = err.Error()
-
-	return ab.writeJSON(w, statusCode, payload)
-}
-
-func (ab *AtomicBroadcast) makeExternalRequest(w http.ResponseWriter, incomingUrl string, method string, jsonData []byte) (*http.Response, error) {
+func (ab *AtomicBroadcast) sendRequest(incomingUrl string, method string, jsonData []byte) (*http.Response, error) {
 	client := &http.Client{}
 	url := fmt.Sprintf(incomingUrl)
 
-	req, err := http.NewRequest(method, url, bytes.NewBuffer(jsonData))
-	if err != nil {
-		//log.Println("Error creating request:", err)
-		ab.errorJSON(w, err, http.StatusBadRequest)
-		return nil, err
-	}
+	req, _ := http.NewRequest(method, url, bytes.NewBuffer(jsonData))
 
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("Content-Type", "application/json")
@@ -227,7 +206,6 @@ func (ab *AtomicBroadcast) makeExternalRequest(w http.ResponseWriter, incomingUr
 	res, err := client.Do(req)
 	if err != nil {
 		//log.Println("Error sending request:", err)
-		//ab.errorJSON(w, err, http.StatusBadRequest)
 		return nil, err
 	}
 

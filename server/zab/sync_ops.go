@@ -1,4 +1,4 @@
-package zooweeper
+package zab
 
 import (
 	"encoding/json"
@@ -11,11 +11,12 @@ import (
 	"time"
 )
 
+// SyncOps for Data Synchronization when a ZooWeeper server joins or restarts
 type SyncOps struct {
 	ab *AtomicBroadcast
 }
 
-// SyncRequestHandler send back current highest ZNodeId
+// SyncRequestHandler handler for ZooWeeper server to send back current highest ZNodeId
 func (so *SyncOps) SyncRequestHandler(_ http.ResponseWriter, r *http.Request) {
 	zNode, _ := so.ab.ZTree.GetLocalMetadata()
 	clientPort := r.Header.Get("X-Sender-Port")
@@ -29,10 +30,10 @@ func (so *SyncOps) SyncRequestHandler(_ http.ResponseWriter, r *http.Request) {
 	color.Yellow("%s received SyncRequest from %s", zNode.NodePort, clientPort)
 	color.Yellow("%s sending syncACK with highest ZNodeId %d to %s\n", zNode.NodePort, highestZNodeId, clientPort)
 	url := fmt.Sprintf(so.ab.BaseURL + ":" + clientPort + "/syncResponse")
-	_, err = so.ab.makeExternalRequest(nil, url, "POST", jsonData)
+	_, err = so.ab.sendRequest(url, "POST", jsonData)
 }
 
-// SyncResponseHandler wait for majority value of highest ZNodeId and send back current highestZNodeId
+// SyncResponseHandler handler for ZooWeeper server to wait for majority value of highest ZNodeId and send back current highestZNodeId
 func (so *SyncOps) SyncResponseHandler(w http.ResponseWriter, r *http.Request) {
 	zNode, _ := so.ab.ZTree.GetLocalMetadata()
 	clientPort := r.Header.Get("X-Sender-Port")
@@ -65,7 +66,7 @@ func (so *SyncOps) SyncResponseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// RequestMetadataHandler send requested Metadatas to Leader to update
+// RequestMetadataHandler handler for ZooWeeper server to send the requested Metadata based on highestZNodeId
 func (so *SyncOps) RequestMetadataHandler(w http.ResponseWriter, r *http.Request) {
 	zNode, _ := so.ab.ZTree.GetLocalMetadata()
 	clientPort := r.Header.Get("X-Sender-Port")
@@ -81,10 +82,10 @@ func (so *SyncOps) RequestMetadataHandler(w http.ResponseWriter, r *http.Request
 
 	color.Yellow("%s send requested Metadata to %s\n", zNode.NodePort, clientPort)
 	url := so.ab.BaseURL + ":" + clientPort + "/updateMetadata"
-	so.ab.makeExternalRequest(nil, url, "POST", jsonData)
+	so.ab.sendRequest(url, "POST", jsonData)
 }
 
-// UpdateMetadataHandler for Leader to update Metadata
+// UpdateMetadataHandler handler for ZooWeeper server to update Metadata based on requested Metadata
 func (so *SyncOps) UpdateMetadataHandler(w http.ResponseWriter, r *http.Request) {
 	zNode, _ := so.ab.ZTree.GetLocalMetadata()
 	clientPort := r.Header.Get("X-Sender-Port")
