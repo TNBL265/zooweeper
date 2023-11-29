@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/tnbl265/zooweeper/ensemble"
 	"github.com/tnbl265/zooweeper/request_processors/data"
 
 	"io/ioutil"
@@ -18,7 +19,6 @@ import (
 
 	"github.com/fatih/color"
 	_ "github.com/mattn/go-sqlite3"
-	ensemble "github.com/tnbl265/zooweeper/ensemble"
 	"github.com/tnbl265/zooweeper/ztree"
 )
 
