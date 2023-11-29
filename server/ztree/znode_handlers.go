@@ -35,7 +35,7 @@ func (zt *ZTree) AllMetadata() ([]*Metadata, error) {
 	return results, nil
 }
 
-func (zt *ZTree) InsertMetadataWithParentId(metadata Metadata, parentId int) error {
+func (zt *ZTree) InsertFirstMetadata(metadata Metadata) error {
 	sqlStatement := `
 	INSERT INTO ZNode (NodePort, Leader, Servers, Timestamp, Version, ParentId, Clients, SenderIp, ReceiverIp) 
 	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
@@ -50,7 +50,7 @@ func (zt *ZTree) InsertMetadataWithParentId(metadata Metadata, parentId int) err
 
 	_, err = row.Exec(
 		metadata.NodePort, metadata.Leader, metadata.Servers, metadata.Timestamp,
-		metadata.Version, parentId,
+		metadata.Version, 0,
 		metadata.Clients, metadata.SenderIp, metadata.ReceiverIp,
 	)
 	if err != nil {
@@ -61,7 +61,8 @@ func (zt *ZTree) InsertMetadataWithParentId(metadata Metadata, parentId int) err
 	return nil
 }
 
-func (zt *ZTree) UpsertMetadata(metadata Metadata) error {
+// InsertMetadataWithParent
+func (zt *ZTree) InsertMetadataWithParent(metadata Metadata) error {
 	nodeId, _ := zt.getParentNodeId(metadata.SenderIp)
 
 	if nodeId == 0 {

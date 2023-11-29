@@ -1,9 +1,9 @@
-// Package request_processors implements the Request Processor for our ZooWeeper components. We make use of HTTP Protocol
+// Package request_processors implements the Request Processor component for our ZooWeeper. We make use of HTTP Protocol
 //
 // 1. Read Request will be handled locally (no middleware)
 // 2. Write Request will be forwarded to Leader node
 // - QueueMiddleware helps to establish a form of Total Order to guarantee FIFO client order and Linearization writes
-// - WriteMiddleware:
+// - WriteOpsMiddleware:
 //   - Follower: forward request to Leader
 //   - Leader: start write proposal for as a classic two-phase commit
 //
@@ -20,7 +20,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	zab "github.com/tnbl265/zooweeper/zab"
+	"github.com/tnbl265/zooweeper/zab"
 )
 
 type RequestProcessor struct {
@@ -49,7 +49,7 @@ func (rp *RequestProcessor) Routes(portStr string) http.Handler {
 		r.Use(rp.Zab.QueueMiddleware)
 		r.Use(rp.Zab.Write.WriteOpsMiddleware)
 
-		r.Post("/metadata", rp.Zab.Write.UpdateMetaData)
+		r.Post("/metadata", rp.Zab.Write.UpdateMetadata)
 	})
 
 	// Proposal Request
@@ -57,7 +57,7 @@ func (rp *RequestProcessor) Routes(portStr string) http.Handler {
 		r.Post("/proposeWrite", rp.Zab.Proposal.ProposeWrite)
 		r.Post("/acknowledgeProposal", rp.Zab.Proposal.AcknowledgeProposal)
 		r.Post("/commitWrite", rp.Zab.Proposal.CommitWrite)
-		r.Post("/writeMetadata", rp.Zab.Write.WriteMetaData)
+		r.Post("/writeMetadata", rp.Zab.Write.WriteMetadata)
 	})
 
 	// Leader Election Request

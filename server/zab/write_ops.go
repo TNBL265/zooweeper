@@ -1,27 +1,24 @@
-package zooweeper
+package zab
 
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 )
 
+// WriteOps for WriteRequest
 type WriteOps struct {
 	ab *AtomicBroadcast
 }
 
-func (wo *WriteOps) UpdateMetaData(http.ResponseWriter, *http.Request) {
+// UpdateMetadata is a placeholder as main processing is in WriteOpsMiddleware
+func (wo *WriteOps) UpdateMetadata(http.ResponseWriter, *http.Request) {
 }
 
-func (wo *WriteOps) WriteMetaData(w http.ResponseWriter, r *http.Request) {
-	data := wo.ab.CreateMetadata(w, r)
-	err := wo.ab.ZTree.UpsertMetadata(data.Metadata)
-	if err != nil {
-		wo.ab.errorJSON(w, err, http.StatusBadRequest)
-		log.Fatal(err)
-		return
-	}
+// WriteMetadata handler to write into ZTree using InsertMetadataWithParent
+func (wo *WriteOps) WriteMetadata(w http.ResponseWriter, r *http.Request) {
+	data := wo.ab.CreateMetadataFromPayload(w, r)
+	wo.ab.ZTree.InsertMetadataWithParent(data.Metadata)
 
 	// Only modify Kafka-Server metadata if it is a leader
 	zNode, _ := wo.ab.ZTree.GetLocalMetadata()
@@ -30,7 +27,7 @@ func (wo *WriteOps) WriteMetaData(w http.ResponseWriter, r *http.Request) {
 		jsonData, _ := json.Marshal(data.GameResults)
 		for _, port := range ports {
 			url := fmt.Sprintf("%s:%s/updateScore", wo.ab.BaseURL, port)
-			_, _ = wo.ab.makeExternalRequest(w, url, "POST", jsonData)
+			_, _ = wo.ab.sendRequest(url, "POST", jsonData)
 		}
 	}
 

@@ -1,4 +1,4 @@
-package zooweeper
+package zab
 
 import (
 	"bytes"
@@ -15,18 +15,16 @@ import (
 	"time"
 )
 
+// ElectionOps for Leader Election messages using Bully Algorithm
 type ElectionOps struct {
 	ab *AtomicBroadcast
 }
 
+// Ping handler for ZooWeeper server to reply with Pong upon receive HealthCheck message
 func (eo *ElectionOps) Ping(portStr string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var requestPayload data.HealthCheck
-		err := eo.ab.readJSON(w, r, &requestPayload)
-		if err != nil {
-			eo.ab.errorJSON(w, err, http.StatusBadRequest)
-			return
-		}
+		eo.ab.readJSON(w, r, &requestPayload)
 
 		payload := data.HealthCheck{
 			Message:    "pong",
@@ -37,17 +35,14 @@ func (eo *ElectionOps) Ping(portStr string) http.HandlerFunc {
 	}
 }
 
+// SelfElectLeaderRequest handler for ZooWeeper server to response to <self-elect> message
 func (eo *ElectionOps) SelfElectLeaderRequest(portStr string) http.HandlerFunc {
 	const REQUEST_TIMEOUT = 10 // Arbitrary wait timer to simulate response time arrival
 	return func(w http.ResponseWriter, r *http.Request) {
 		hasFailedElection := false
 
 		var requestPayload data.ElectLeaderRequest
-		err := eo.ab.readJSON(w, r, &requestPayload)
-		if err != nil {
-			eo.ab.errorJSON(w, err, http.StatusBadRequest)
-			return
-		}
+		eo.ab.readJSON(w, r, &requestPayload)
 
 		incomingPortNumber, _ := strconv.Atoi(requestPayload.IncomingPort)
 		currentPortNumber, _ := strconv.Atoi(portStr)
@@ -130,17 +125,13 @@ func (eo *ElectionOps) SelfElectLeaderRequest(portStr string) http.HandlerFunc {
 	}
 }
 
-// DeclareLeaderReceive send response to all other nodes that incoming port is a leader.
+// DeclareLeaderReceive handler to update Ensemble information once Bully terminate
 func (eo *ElectionOps) DeclareLeaderReceive() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		zNode, _ := eo.ab.ZTree.GetLocalMetadata()
 
 		var requestPayload data.DeclareLeaderRequest
-		err := eo.ab.readJSON(w, r, &requestPayload)
-		if err != nil {
-			eo.ab.errorJSON(w, err, http.StatusBadRequest)
-			return
-		}
+		eo.ab.readJSON(w, r, &requestPayload)
 
 		leaderPort := requestPayload.IncomingPort
 		color.Cyan("%s updating Leader to %s", zNode.NodePort, leaderPort)
