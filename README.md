@@ -43,7 +43,7 @@ go mod tidy
 PORT=8080 go run main.go
 ```
 - Output: `pong` on `localhost:8080`
-### Kafka Server (Express)
+### Kafka Server
 - Run:
 ```shell
 cd zooweeper/kafka-server
@@ -51,7 +51,7 @@ npm install
 PORT=9090 npm start
 ```
 - Output: `Events` json on `localhost:9090`
-### Kafka Client Application (React)
+### Kafka React Application
 - Run: 
 ```shell
 cd zooweeper/kafka-react-app
@@ -61,17 +61,15 @@ PORT=3000 npm start
 - Output: formatted `Events` json on `localhost:3000`  (when Kafka Server is running)
 
 ### Distributed System Demo
-- Overview: The above applications would be dockerized:
-  - 3x Zookeeper Server
-  - 3x Kafka Server (Express)
-  - 2x Kafka Client Application (React)
-- Should delete all your `.db` file else the build will be very slow
-- Run:
-```shell
-cd zooweeper
-docker-compose up
-```
-- Test sending of `10` requests from Kafka Server `9090` piggybacking all other Kafka Server metadata `"9090,9091,9092"`
+- You can choose how many of each services to deploy. Example for:
+  - 5x ZooWeeper Servers
+  - 4x Kafka Servers
+  - 3x Kafka React Applications
+  ```shell
+  cd zooweeper
+  ./deployment.sh 5 4 3
+  ```
+- Test sending of `10` requests from Kafka Server `9090` piggybacking `Clients` metadata `"9090,9091,9092"`
 ```shell
 cd zooweeper
 ./send_requests.sh 10 9090 "9090,9091,9092"

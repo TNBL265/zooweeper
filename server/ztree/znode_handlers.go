@@ -276,7 +276,7 @@ func (zt *ZTree) updateProcessMetadata(metadata Metadata, parent, version int) e
 	defer row.Close()
 
 	_, err = row.Exec(
-		"", "", "", metadata.Timestamp, 0, version, parent,
+		"", "", "", metadata.Timestamp, version, parent,
 		metadata.Clients, metadata.SenderIp, metadata.ReceiverIp,
 	)
 	if err != nil {

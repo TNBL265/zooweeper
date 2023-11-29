@@ -25,3 +25,4 @@ go.work
 *.db
 
 /frontend/node_modules
+docker-compose.yml
