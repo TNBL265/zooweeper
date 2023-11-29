@@ -19,7 +19,6 @@ func (zt *ZTree) InitializeDB() {
 		Leader TEXT,
 		Servers TEXT,
 		Timestamp DATETIME,
-		Attempts INTEGER,
 		Version INTEGER,
 		ParentId INTEGER,
 		Clients TEXT,
@@ -50,7 +49,7 @@ func (zt *ZTree) GetLocalMetadata() (*models.Metadata, error) {
 	var data models.Metadata
 	err := row.Scan(
 		&data.NodeId, &data.NodeIp, &data.Leader, &data.Servers,
-		&data.Timestamp, &data.Attempts, &data.Version, &data.ParentId,
+		&data.Timestamp, &data.Version, &data.ParentId,
 		&data.Clients, &data.SenderIp, &data.ReceiverIp,
 	)
 	if err != nil {
@@ -74,8 +73,8 @@ func (zt *ZTree) getParentNodeId(senderIp string) (int, error) {
 
 func (zt *ZTree) insertParentProcessMetadata(metadata models.Metadata) error {
 	sqlPartialInsert := `
-	INSERT INTO ZNode (NodeIp, Leader, Servers, Timestamp, Attempts, Version, ParentId, Clients, SenderIp, ReceiverIp) 
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+	INSERT INTO ZNode (NodeIp, Leader, Servers, Timestamp, Version, ParentId, Clients, SenderIp, ReceiverIp) 
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
 `
 	row, err := zt.DB.Prepare(sqlPartialInsert)
 	if err != nil {
@@ -136,8 +135,8 @@ func (zt *ZTree) checkSenderClientsMatch(senderIp, clients string) (int, bool, e
 
 func (zt *ZTree) updateProcessMetadata(metadata models.Metadata, parent, version int) error {
 	sqlPartialInsert := `
-	INSERT INTO ZNode (NodeIp, Leader, Servers, Timestamp, Attempts, Version, ParentId, Clients, SenderIp, ReceiverIp) 
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+	INSERT INTO ZNode (NodeIp, Leader, Servers, Timestamp, Version, ParentId, Clients, SenderIp, ReceiverIp) 
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
 `
 	row, err := zt.DB.Prepare(sqlPartialInsert)
 	if err != nil {
@@ -173,7 +172,7 @@ func (zt *ZTree) GetHighestZNodeId() (int, error) {
 
 func (zt *ZTree) GetMetadatasGreaterThanZNodeId(highestZNodeId int) (models.Metadatas, error) {
 	sqlStatement := `
-        SELECT NodeId, NodeIp, Leader, Servers, Timestamp, Attempts, Version, ParentId, Clients, SenderIp, ReceiverIp
+        SELECT NodeId, NodeIp, Leader, Servers, Timestamp, Version, ParentId, Clients, SenderIp, ReceiverIp
         FROM ZNode
         WHERE NodeId > ?
     `
@@ -187,7 +186,7 @@ func (zt *ZTree) GetMetadatasGreaterThanZNodeId(highestZNodeId int) (models.Meta
 	var metadatas models.Metadatas
 	for rows.Next() {
 		var md models.Metadata
-		err := rows.Scan(&md.NodeId, &md.NodeIp, &md.Leader, &md.Servers, &md.Timestamp, &md.Attempts, &md.Version, &md.ParentId, &md.Clients, &md.SenderIp, &md.ReceiverIp)
+		err := rows.Scan(&md.NodeId, &md.NodeIp, &md.Leader, &md.Servers, &md.Timestamp, &md.Version, &md.ParentId, &md.Clients, &md.SenderIp, &md.ReceiverIp)
 		if err != nil {
 			log.Println("Error scanning Metadata row:", err)
 			return models.Metadatas{}, err

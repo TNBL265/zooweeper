@@ -6,7 +6,6 @@ type Metadata struct {
 	Leader     string `json:"Leader"`
 	Servers    string `json:"Servers"`
 	Timestamp  string `json:"Timestamp"`
-	Attempts   int    `json:"Attempts"`
 	Version    int    `json:"Version"`
 	ParentId   int    `json:"ParentId"`
 	Clients    string `json:"Clients"`
