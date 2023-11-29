@@ -222,7 +222,7 @@ func (ab *AtomicBroadcast) makeExternalRequest(w http.ResponseWriter, incomingUr
 	req.Header.Add("Content-Type", "application/json")
 
 	zNode, err := ab.ZTree.GetLocalMetadata()
-	req.Header.Add("X-Sender-Port", zNode.NodeIp)
+	req.Header.Add("X-Sender-Port", zNode.NodePort)
 
 	res, err := client.Do(req)
 	if err != nil {

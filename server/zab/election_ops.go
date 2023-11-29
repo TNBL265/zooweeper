@@ -143,7 +143,7 @@ func (eo *ElectionOps) DeclareLeaderReceive() http.HandlerFunc {
 		}
 
 		leaderPort := requestPayload.IncomingPort
-		color.Cyan("%s updating Leader to %s", zNode.NodeIp, leaderPort)
+		color.Cyan("%s updating Leader to %s", zNode.NodePort, leaderPort)
 		eo.ab.ZTree.UpdateFirstLeader(leaderPort)
 	}
 }

@@ -22,8 +22,8 @@ func (po *ProposalOps) ProposeWrite(w http.ResponseWriter, r *http.Request) {
 	data := po.ab.CreateMetadata(w, r)
 	jsonData, _ := json.Marshal(data)
 
-	color.HiBlue("%s received Propose Write from %s\n", zNode.NodeIp, clientPort)
-	color.HiBlue("%s sending proposalACK to %s\n", zNode.NodeIp, clientPort)
+	color.HiBlue("%s received Propose Write from %s\n", zNode.NodePort, clientPort)
+	color.HiBlue("%s sending proposalACK to %s\n", zNode.NodePort, clientPort)
 	url := po.ab.BaseURL + ":" + zNode.Leader + "/acknowledgeProposal"
 	_, err = po.ab.makeExternalRequest(nil, url, "POST", jsonData)
 }
@@ -34,7 +34,7 @@ func (po *ProposalOps) AcknowledgeProposal(w http.ResponseWriter, r *http.Reques
 	if clientPort == zNode.Leader {
 		color.Red("I'm the Leader I'm not supposed to get acknowledged from myself\n")
 	}
-	color.HiBlue("Leader %s received ACK from Follower %s\n", zNode.NodeIp, clientPort)
+	color.HiBlue("Leader %s received ACK from Follower %s\n", zNode.NodePort, clientPort)
 
 	// Wait for majority of Follower to ACK
 	portsSlice := strings.Split(zNode.Servers, ",")
@@ -47,7 +47,7 @@ func (po *ProposalOps) AcknowledgeProposal(w http.ResponseWriter, r *http.Reques
 			po.ab.SetAckCounter(currentAckCount)
 
 			if currentAckCount > majority {
-				color.HiBlue("Leader %s received majority proposalAck, %d\n", zNode.NodeIp, currentAckCount)
+				color.HiBlue("Leader %s received majority proposalAck, %d\n", zNode.NodePort, currentAckCount)
 				po.ab.SetAckCounter(0)
 				po.ab.SetProposalState(ACKNOWLEDGED)
 				break
@@ -61,7 +61,7 @@ func (po *ProposalOps) AcknowledgeProposal(w http.ResponseWriter, r *http.Reques
 	data := po.ab.CreateMetadata(w, r)
 	jsonData, _ := json.Marshal(data)
 
-	color.HiBlue("Leader %s asking Follower %s to commit\n", zNode.NodeIp, clientPort)
+	color.HiBlue("Leader %s asking Follower %s to commit\n", zNode.NodePort, clientPort)
 	url := po.ab.BaseURL + ":" + clientPort + "/commitWrite"
 	_, err = po.ab.makeExternalRequest(nil, url, "POST", jsonData)
 	if err != nil {
@@ -77,9 +77,9 @@ func (po *ProposalOps) CommitWrite(w http.ResponseWriter, r *http.Request) {
 	data := po.ab.CreateMetadata(w, r)
 	jsonData, _ := json.Marshal(data)
 
-	color.HiBlue("%s receive Commit Write from %s\n", zNode.NodeIp, clientPort)
-	color.HiBlue("%s Committing Write\n", zNode.NodeIp)
-	url := po.ab.BaseURL + ":" + zNode.NodeIp + "/writeMetadata"
+	color.HiBlue("%s receive Commit Write from %s\n", zNode.NodePort, clientPort)
+	color.HiBlue("%s Committing Write\n", zNode.NodePort)
+	url := po.ab.BaseURL + ":" + zNode.NodePort + "/writeMetadata"
 	_, err = po.ab.makeExternalRequest(nil, url, "POST", jsonData)
 	if err != nil {
 		color.Red("Error Commiting Write: %s\n", err.Error())

@@ -26,8 +26,8 @@ func (so *SyncOps) SyncRequestHandler(_ http.ResponseWriter, r *http.Request) {
 	}
 	jsonData, _ := json.Marshal(metadata)
 
-	color.Yellow("%s received SyncRequest from %s", zNode.NodeIp, clientPort)
-	color.Yellow("%s sending syncACK with highest ZNodeId %d to %s\n", zNode.NodeIp, highestZNodeId, clientPort)
+	color.Yellow("%s received SyncRequest from %s", zNode.NodePort, clientPort)
+	color.Yellow("%s sending syncACK with highest ZNodeId %d to %s\n", zNode.NodePort, highestZNodeId, clientPort)
 	url := fmt.Sprintf(so.ab.BaseURL + ":" + clientPort + "/syncResponse")
 	_, err = so.ab.makeExternalRequest(nil, url, "POST", jsonData)
 }
@@ -40,7 +40,7 @@ func (so *SyncOps) SyncResponseHandler(w http.ResponseWriter, r *http.Request) {
 	var requestPayload ztree.Metadata
 	so.ab.readJSON(w, r, &requestPayload)
 
-	color.Yellow("%s received SyncResponse with highestZNodeId %d from %s", zNode.NodeIp, requestPayload.NodeId, clientPort)
+	color.Yellow("%s received SyncResponse with highestZNodeId %d from %s", zNode.NodePort, requestPayload.NodeId, clientPort)
 
 	// Wait for majority of Follower to ACK
 	portsSlice := strings.Split(zNode.Servers, ",")
@@ -53,7 +53,7 @@ func (so *SyncOps) SyncResponseHandler(w http.ResponseWriter, r *http.Request) {
 			so.ab.SetSyncCounter(currentSyncAckCount)
 
 			if currentSyncAckCount > majority {
-				color.Yellow("Leader %s received majority syncAck, %d\n", zNode.NodeIp, currentSyncAckCount)
+				color.Yellow("Leader %s received majority syncAck, %d\n", zNode.NodePort, currentSyncAckCount)
 				so.ab.SetSyncCounter(0)
 				so.ab.SetSyncState(ACKED)
 				break
@@ -74,12 +74,12 @@ func (so *SyncOps) RequestMetadataHandler(w http.ResponseWriter, r *http.Request
 	so.ab.readJSON(w, r, &requestPayload)
 
 	highestZNodeId := requestPayload.NodeId
-	color.Yellow("%s received RequestMetadata with highestZNodeId %d from %s", zNode.NodeIp, highestZNodeId, clientPort)
+	color.Yellow("%s received RequestMetadata with highestZNodeId %d from %s", zNode.NodePort, highestZNodeId, clientPort)
 
 	metadatas, _ := so.ab.ZTree.GetMetadatasGreaterThanZNodeId(highestZNodeId)
 	jsonData, _ := json.Marshal(metadatas)
 
-	color.Yellow("%s send requested Metadata to %s\n", zNode.NodeIp, clientPort)
+	color.Yellow("%s send requested Metadata to %s\n", zNode.NodePort, clientPort)
 	url := so.ab.BaseURL + ":" + clientPort + "/updateMetadata"
 	so.ab.makeExternalRequest(nil, url, "POST", jsonData)
 }
@@ -92,7 +92,7 @@ func (so *SyncOps) UpdateMetadataHandler(w http.ResponseWriter, r *http.Request)
 	var metadatas ztree.Metadatas
 	so.ab.readJSON(w, r, &metadatas)
 
-	color.Yellow("%s received updated Metadata from %s", zNode.NodeIp, clientPort)
+	color.Yellow("%s received updated Metadata from %s", zNode.NodePort, clientPort)
 
 	for _, metadata := range metadatas.MetadataList {
 		exists, err := so.ab.ZTree.ZNodeIdExists(metadata.NodeId)

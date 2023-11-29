@@ -7,10 +7,6 @@ import (
 	"strings"
 )
 
-type ZTree struct {
-	DB *sql.DB
-}
-
 func (zt *ZTree) AllMetadata() ([]*Metadata, error) {
 	rows, err := zt.DB.Query("SELECT * FROM ZNode")
 	if err != nil {
@@ -25,7 +21,7 @@ func (zt *ZTree) AllMetadata() ([]*Metadata, error) {
 	for rows.Next() {
 		var data Metadata
 		err := rows.Scan(
-			&data.NodeId, &data.NodeIp, &data.Leader, &data.Servers,
+			&data.NodeId, &data.NodePort, &data.Leader, &data.Servers,
 			&data.Timestamp, &data.Version, &data.ParentId,
 			&data.Clients, &data.SenderIp, &data.ReceiverIp,
 		)
@@ -41,7 +37,7 @@ func (zt *ZTree) AllMetadata() ([]*Metadata, error) {
 
 func (zt *ZTree) InsertMetadataWithParentId(metadata Metadata, parentId int) error {
 	sqlStatement := `
-	INSERT INTO ZNode (NodeIp, Leader, Servers, Timestamp, Version, ParentId, Clients, SenderIp, ReceiverIp) 
+	INSERT INTO ZNode (NodePort, Leader, Servers, Timestamp, Version, ParentId, Clients, SenderIp, ReceiverIp) 
 	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
 `
 
@@ -53,7 +49,7 @@ func (zt *ZTree) InsertMetadataWithParentId(metadata Metadata, parentId int) err
 	defer row.Close()
 
 	_, err = row.Exec(
-		metadata.NodeIp, metadata.Leader, metadata.Servers, metadata.Timestamp,
+		metadata.NodePort, metadata.Leader, metadata.Servers, metadata.Timestamp,
 		metadata.Version, parentId,
 		metadata.Clients, metadata.SenderIp, metadata.ReceiverIp,
 	)
@@ -109,10 +105,10 @@ func (zt *ZTree) GetClients(client string) ([]string, error) {
 
 func (zt *ZTree) InsertMetadata(metadata Metadata) error {
 	sqlInsert := `
-        INSERT INTO ZNode (NodeId, NodeIp, Leader, Servers, Timestamp, Version, ParentId, Clients, SenderIp, ReceiverIp)
+        INSERT INTO ZNode (NodeId, NodePort, Leader, Servers, Timestamp, Version, ParentId, Clients, SenderIp, ReceiverIp)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `
-	_, err := zt.DB.Exec(sqlInsert, metadata.NodeId, metadata.NodeIp, metadata.Leader, metadata.Servers, metadata.Timestamp, metadata.Version, metadata.ParentId, metadata.Clients, metadata.SenderIp, metadata.ReceiverIp)
+	_, err := zt.DB.Exec(sqlInsert, metadata.NodeId, metadata.NodePort, metadata.Leader, metadata.Servers, metadata.Timestamp, metadata.Version, metadata.ParentId, metadata.Clients, metadata.SenderIp, metadata.ReceiverIp)
 	return err
 }
 
@@ -148,7 +144,7 @@ func (zt *ZTree) InitializeDB() {
 	createTableSQL := `
 	CREATE TABLE IF NOT EXISTS ZNode (
 		NodeId INTEGER PRIMARY KEY AUTOINCREMENT,
-		NodeIp TEXT,
+		NodePort TEXT,
 		Leader TEXT,
 		Servers TEXT,
 		Timestamp DATETIME,
@@ -181,7 +177,7 @@ func (zt *ZTree) GetLocalMetadata() (*Metadata, error) {
 
 	var data Metadata
 	err := row.Scan(
-		&data.NodeId, &data.NodeIp, &data.Leader, &data.Servers,
+		&data.NodeId, &data.NodePort, &data.Leader, &data.Servers,
 		&data.Timestamp, &data.Version, &data.ParentId,
 		&data.Clients, &data.SenderIp, &data.ReceiverIp,
 	)
@@ -206,7 +202,7 @@ func (zt *ZTree) getParentNodeId(senderIp string) (int, error) {
 
 func (zt *ZTree) insertParentProcessMetadata(metadata Metadata) error {
 	sqlPartialInsert := `
-	INSERT INTO ZNode (NodeIp, Leader, Servers, Timestamp, Version, ParentId, Clients, SenderIp, ReceiverIp) 
+	INSERT INTO ZNode (NodePort, Leader, Servers, Timestamp, Version, ParentId, Clients, SenderIp, ReceiverIp) 
 	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
 `
 	row, err := zt.DB.Prepare(sqlPartialInsert)
@@ -217,7 +213,7 @@ func (zt *ZTree) insertParentProcessMetadata(metadata Metadata) error {
 	defer row.Close()
 
 	_, err = row.Exec(
-		"", "", "", metadata.Timestamp, 0, 0, 1,
+		"", "", "", metadata.Timestamp, 0, 1,
 		metadata.Clients, metadata.SenderIp, metadata.ReceiverIp,
 	)
 	if err != nil {
@@ -268,7 +264,7 @@ func (zt *ZTree) checkSenderClientsMatch(senderIp, clients string) (int, bool, e
 
 func (zt *ZTree) updateProcessMetadata(metadata Metadata, parent, version int) error {
 	sqlPartialInsert := `
-	INSERT INTO ZNode (NodeIp, Leader, Servers, Timestamp, Version, ParentId, Clients, SenderIp, ReceiverIp) 
+	INSERT INTO ZNode (NodePort, Leader, Servers, Timestamp, Version, ParentId, Clients, SenderIp, ReceiverIp) 
 	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
 `
 	row, err := zt.DB.Prepare(sqlPartialInsert)
@@ -305,7 +301,7 @@ func (zt *ZTree) GetHighestZNodeId() (int, error) {
 
 func (zt *ZTree) GetMetadatasGreaterThanZNodeId(highestZNodeId int) (Metadatas, error) {
 	sqlStatement := `
-        SELECT NodeId, NodeIp, Leader, Servers, Timestamp, Version, ParentId, Clients, SenderIp, ReceiverIp
+        SELECT NodeId, NodePort, Leader, Servers, Timestamp, Version, ParentId, Clients, SenderIp, ReceiverIp
         FROM ZNode
         WHERE NodeId > ?
     `
@@ -319,7 +315,7 @@ func (zt *ZTree) GetMetadatasGreaterThanZNodeId(highestZNodeId int) (Metadatas, 
 	var metadatas Metadatas
 	for rows.Next() {
 		var md Metadata
-		err := rows.Scan(&md.NodeId, &md.NodeIp, &md.Leader, &md.Servers, &md.Timestamp, &md.Version, &md.ParentId, &md.Clients, &md.SenderIp, &md.ReceiverIp)
+		err := rows.Scan(&md.NodeId, &md.NodePort, &md.Leader, &md.Servers, &md.Timestamp, &md.Version, &md.ParentId, &md.Clients, &md.SenderIp, &md.ReceiverIp)
 		if err != nil {
 			log.Println("Error scanning Metadata row:", err)
 			return Metadatas{}, err
