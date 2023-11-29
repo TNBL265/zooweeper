@@ -1,15 +1,13 @@
 package zooweeper
 
-import (
-	rp "github.com/tnbl265/zooweeper/request_processors"
-)
+import "github.com/tnbl265/zooweeper/request_processors"
 
 type Server struct {
-	Rp rp.RequestProcessor
+	Rp request_processors.RequestProcessor
 }
 
 func NewServer(dbPath string) *Server {
 	return &Server{
-		Rp: *rp.NewRequestProcessor(dbPath),
+		Rp: *request_processors.NewRequestProcessor(dbPath),
 	}
 }
