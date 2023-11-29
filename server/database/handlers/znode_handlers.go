@@ -40,7 +40,7 @@ func (zt *ZTree) AllMetadata() ([]*models.Metadata, error) {
 	return results, nil
 }
 
-func (zt *ZTree) InsertMetadata(metadata models.Metadata, parentId int) error {
+func (zt *ZTree) InsertMetadataWithParentId(metadata models.Metadata, parentId int) error {
 	sqlStatement := `
 	INSERT INTO ZNode (NodeIp, Leader, Servers, Timestamp, Attempts, Version, ParentId, Clients, SenderIp, ReceiverIp) 
 	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
@@ -106,6 +106,15 @@ func (zt *ZTree) GetClients(client string) ([]string, error) {
 	clients := strings.Split(clientsStr, ",")
 
 	return clients, nil
+}
+
+func (zt *ZTree) InsertMetadata(metadata models.Metadata) error {
+	sqlInsert := `
+        INSERT INTO ZNode (NodeId, NodeIp, Leader, Servers, Timestamp, Attempts, Version, ParentId, Clients, SenderIp, ReceiverIp)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `
+	_, err := zt.DB.Exec(sqlInsert, metadata.NodeId, metadata.NodeIp, metadata.Leader, metadata.Servers, metadata.Timestamp, metadata.Attempts, metadata.Version, metadata.ParentId, metadata.Clients, metadata.SenderIp, metadata.ReceiverIp)
+	return err
 }
 
 func (zt *ZTree) UpdateFirstLeader(leader string) error {

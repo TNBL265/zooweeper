@@ -122,7 +122,7 @@ func (eo *ElectionOps) SelfElectLeaderRequest(portStr string) http.HandlerFunc {
 		// Declare itself leader to all other nodes if node succeeds
 		if !hasFailedElection {
 			eo.ab.declareLeaderRequest(portStr, allServers)
-			eo.ab.syncMetadata(allServers)
+			eo.ab.syncMetadata()
 		}
 		_ = eo.ab.writeJSON(w, http.StatusOK, payload)
 	}

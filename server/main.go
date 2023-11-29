@@ -71,7 +71,7 @@ func main() {
 
 // initZNode insert first Znode to self-identify
 func initZNode(server *ensemble.Server, port, leader int, allServers []int) {
-	existFirstNode, _ := server.Rp.Zab.ZTree.NodeIdExists(1)
+	existFirstNode, _ := server.Rp.Zab.ZTree.ZNodeIdExists(1)
 	if existFirstNode {
 		return
 	}
@@ -87,7 +87,7 @@ func initZNode(server *ensemble.Server, port, leader int, allServers []int) {
 		Leader:  strconv.Itoa(leader),
 		Servers: allServersStr,
 	}
-	server.Rp.Zab.ZTree.InsertMetadata(metadata, 0)
+	server.Rp.Zab.ZTree.InsertMetadataWithParentId(metadata, 0)
 }
 
 // ping all other servers

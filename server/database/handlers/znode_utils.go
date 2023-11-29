@@ -33,7 +33,7 @@ func (zt *ZTree) InitializeDB() {
 	}
 }
 
-func (zt *ZTree) NodeIdExists(nodeId int) (bool, error) {
+func (zt *ZTree) ZNodeIdExists(nodeId int) (bool, error) {
 	checkStatement := `SELECT COUNT(*) FROM ZNode WHERE NodeId = ?;`
 	var count int
 	err := zt.DB.QueryRow(checkStatement, nodeId).Scan(&count)
@@ -158,15 +158,28 @@ func (zt *ZTree) updateProcessMetadata(metadata models.Metadata, parent, version
 	return nil
 }
 
-func (zt *ZTree) GetMetadataWithParentId(parentId int) (models.Metadatas, error) {
+func (zt *ZTree) GetHighestZNodeId() (int, error) {
 	sqlStatement := `
-        SELECT NodeId, NodeIp, Leader, Servers, Timestamp, Attempts, Version, ParentId, Clients, SenderIp, ReceiverIp 
-        FROM ZNode 
-        WHERE ParentId = ?
+        SELECT MAX(NodeId) FROM ZNode
     `
-	rows, err := zt.DB.Query(sqlStatement, parentId)
+	var highestZNodeId int
+	err := zt.DB.QueryRow(sqlStatement).Scan(&highestZNodeId)
 	if err != nil {
-		log.Println("Error querying Metadata with ParentId:", err)
+		log.Println("Error retrieving the highest NodeId:", err)
+		return 0, err
+	}
+	return highestZNodeId, nil
+}
+
+func (zt *ZTree) GetMetadatasGreaterThanZNodeId(highestZNodeId int) (models.Metadatas, error) {
+	sqlStatement := `
+        SELECT NodeId, NodeIp, Leader, Servers, Timestamp, Attempts, Version, ParentId, Clients, SenderIp, ReceiverIp
+        FROM ZNode
+        WHERE NodeId > ?
+    `
+	rows, err := zt.DB.Query(sqlStatement, highestZNodeId)
+	if err != nil {
+		log.Println("Error querying Metadatas:", err)
 		return models.Metadatas{}, err
 	}
 	defer rows.Close()
@@ -182,39 +195,10 @@ func (zt *ZTree) GetMetadataWithParentId(parentId int) (models.Metadatas, error)
 		metadatas.MetadataList = append(metadatas.MetadataList, md)
 	}
 
-	if err := rows.Err(); err != nil {
-		log.Println("Error iterating Metadata rows:", err)
+	if err = rows.Err(); err != nil {
+		log.Println("Error iterating through Metadata rows:", err)
 		return models.Metadatas{}, err
 	}
 
 	return metadatas, nil
-}
-
-func (zt *ZTree) GetVersionBySenderIp(senderIp string) (int, error) {
-	sqlStatement := `
-        SELECT Version 
-        FROM ZNode 
-        WHERE SenderIp = ? AND ParentId = 1
-    `
-	var version int
-	err := zt.DB.QueryRow(sqlStatement, senderIp).Scan(&version)
-	if err != nil {
-		log.Println("Error querying version by SenderIp:", err)
-		return -1, err
-	}
-
-	return version, nil
-}
-
-func (zt *ZTree) UpdateMetadata(metadata models.Metadata) error {
-	// TODO: Bug fix
-	parentId, _ := zt.getParentNodeId(metadata.SenderIp)
-
-	if parentId == -1 {
-		zt.updateProcessMetadata(metadata, 1, 1)
-	} else {
-		zt.insertParentProcessMetadata(metadata)
-	}
-
-	return nil
 }
