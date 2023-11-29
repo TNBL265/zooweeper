@@ -1,4 +1,4 @@
-package models
+package ztree
 
 type Metadata struct {
 	NodeId     int    `json:"NodeId"`

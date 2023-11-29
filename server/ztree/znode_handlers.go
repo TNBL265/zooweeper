@@ -1,8 +1,7 @@
-package handlers
+package ztree
 
 import (
 	"database/sql"
-	"github.com/tnbl265/zooweeper/ztree/models"
 	"log"
 	"strconv"
 	"strings"
@@ -12,7 +11,7 @@ type ZTree struct {
 	DB *sql.DB
 }
 
-func (zt *ZTree) AllMetadata() ([]*models.Metadata, error) {
+func (zt *ZTree) AllMetadata() ([]*Metadata, error) {
 	rows, err := zt.DB.Query("SELECT * FROM ZNode")
 	if err != nil {
 		log.Println("Error querying the ztree:", err)
@@ -21,10 +20,10 @@ func (zt *ZTree) AllMetadata() ([]*models.Metadata, error) {
 	defer rows.Close()
 
 	// collate all rows into one slice
-	var results []*models.Metadata
+	var results []*Metadata
 
 	for rows.Next() {
-		var data models.Metadata
+		var data Metadata
 		err := rows.Scan(
 			&data.NodeId, &data.NodeIp, &data.Leader, &data.Servers,
 			&data.Timestamp, &data.Version, &data.ParentId,
@@ -40,7 +39,7 @@ func (zt *ZTree) AllMetadata() ([]*models.Metadata, error) {
 	return results, nil
 }
 
-func (zt *ZTree) InsertMetadataWithParentId(metadata models.Metadata, parentId int) error {
+func (zt *ZTree) InsertMetadataWithParentId(metadata Metadata, parentId int) error {
 	sqlStatement := `
 	INSERT INTO ZNode (NodeIp, Leader, Servers, Timestamp, Version, ParentId, Clients, SenderIp, ReceiverIp) 
 	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
@@ -66,7 +65,7 @@ func (zt *ZTree) InsertMetadataWithParentId(metadata models.Metadata, parentId i
 	return nil
 }
 
-func (zt *ZTree) UpsertMetadata(metadata models.Metadata) error {
+func (zt *ZTree) UpsertMetadata(metadata Metadata) error {
 	nodeId, _ := zt.getParentNodeId(metadata.SenderIp)
 
 	if nodeId == 0 {
@@ -108,7 +107,7 @@ func (zt *ZTree) GetClients(client string) ([]string, error) {
 	return clients, nil
 }
 
-func (zt *ZTree) InsertMetadata(metadata models.Metadata) error {
+func (zt *ZTree) InsertMetadata(metadata Metadata) error {
 	sqlInsert := `
         INSERT INTO ZNode (NodeId, NodeIp, Leader, Servers, Timestamp, Version, ParentId, Clients, SenderIp, ReceiverIp)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -177,10 +176,10 @@ func (zt *ZTree) ZNodeIdExists(nodeId int) (bool, error) {
 	return count > 0, nil
 }
 
-func (zt *ZTree) GetLocalMetadata() (*models.Metadata, error) {
+func (zt *ZTree) GetLocalMetadata() (*Metadata, error) {
 	row := zt.DB.QueryRow("SELECT * FROM ZNode WHERE NodeId = 1")
 
-	var data models.Metadata
+	var data Metadata
 	err := row.Scan(
 		&data.NodeId, &data.NodeIp, &data.Leader, &data.Servers,
 		&data.Timestamp, &data.Version, &data.ParentId,
@@ -205,7 +204,7 @@ func (zt *ZTree) getParentNodeId(senderIp string) (int, error) {
 	return nodeId, nil
 }
 
-func (zt *ZTree) insertParentProcessMetadata(metadata models.Metadata) error {
+func (zt *ZTree) insertParentProcessMetadata(metadata Metadata) error {
 	sqlPartialInsert := `
 	INSERT INTO ZNode (NodeIp, Leader, Servers, Timestamp, Version, ParentId, Clients, SenderIp, ReceiverIp) 
 	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
@@ -267,7 +266,7 @@ func (zt *ZTree) checkSenderClientsMatch(senderIp, clients string) (int, bool, e
 
 }
 
-func (zt *ZTree) updateProcessMetadata(metadata models.Metadata, parent, version int) error {
+func (zt *ZTree) updateProcessMetadata(metadata Metadata, parent, version int) error {
 	sqlPartialInsert := `
 	INSERT INTO ZNode (NodeIp, Leader, Servers, Timestamp, Version, ParentId, Clients, SenderIp, ReceiverIp) 
 	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
@@ -304,7 +303,7 @@ func (zt *ZTree) GetHighestZNodeId() (int, error) {
 	return highestZNodeId, nil
 }
 
-func (zt *ZTree) GetMetadatasGreaterThanZNodeId(highestZNodeId int) (models.Metadatas, error) {
+func (zt *ZTree) GetMetadatasGreaterThanZNodeId(highestZNodeId int) (Metadatas, error) {
 	sqlStatement := `
         SELECT NodeId, NodeIp, Leader, Servers, Timestamp, Version, ParentId, Clients, SenderIp, ReceiverIp
         FROM ZNode
@@ -313,24 +312,24 @@ func (zt *ZTree) GetMetadatasGreaterThanZNodeId(highestZNodeId int) (models.Meta
 	rows, err := zt.DB.Query(sqlStatement, highestZNodeId)
 	if err != nil {
 		log.Println("Error querying Metadatas:", err)
-		return models.Metadatas{}, err
+		return Metadatas{}, err
 	}
 	defer rows.Close()
 
-	var metadatas models.Metadatas
+	var metadatas Metadatas
 	for rows.Next() {
-		var md models.Metadata
+		var md Metadata
 		err := rows.Scan(&md.NodeId, &md.NodeIp, &md.Leader, &md.Servers, &md.Timestamp, &md.Version, &md.ParentId, &md.Clients, &md.SenderIp, &md.ReceiverIp)
 		if err != nil {
 			log.Println("Error scanning Metadata row:", err)
-			return models.Metadatas{}, err
+			return Metadatas{}, err
 		}
 		metadatas.MetadataList = append(metadatas.MetadataList, md)
 	}
 
 	if err = rows.Err(); err != nil {
 		log.Println("Error iterating through Metadata rows:", err)
-		return models.Metadatas{}, err
+		return Metadatas{}, err
 	}
 
 	return metadatas, nil

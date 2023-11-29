@@ -8,8 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/fatih/color"
-	"github.com/tnbl265/zooweeper/database/handlers"
-	"github.com/tnbl265/zooweeper/database/models"
+	"github.com/tnbl265/zooweeper/request_processors/data"
+	"github.com/tnbl265/zooweeper/ztree"
 	"io"
 	"log"
 	"net/http"
@@ -80,7 +80,7 @@ func NewAtomicBroadcast(dbPath string) *AtomicBroadcast {
 	if err != nil {
 		log.Fatal(err)
 	}
-	ab.ZTree = &handlers.ZTree{DB: db}
+	ab.ZTree = &ztree.ZTree{DB: db}
 	ab.Read.ab = ab
 	ab.Write.ab = ab
 	ab.Proposal.ab = ab
@@ -89,7 +89,7 @@ func NewAtomicBroadcast(dbPath string) *AtomicBroadcast {
 
 	ab.proposalState = COMMITTED
 
-	ab.ErrorLeaderChan = make(chan models.HealthCheckError)
+	ab.ErrorLeaderChan = make(chan data.HealthCheckError)
 
 	ab.pq = make(PriorityQueue, 0)
 	heap.Init(&ab.pq)
@@ -112,15 +112,15 @@ func (ab *AtomicBroadcast) OpenDB(datasource string) (*sql.DB, error) {
 	return db, nil
 }
 
-func (ab *AtomicBroadcast) CreateMetadata(w http.ResponseWriter, r *http.Request) models.Data {
-	var requestPayload models.Data
+func (ab *AtomicBroadcast) CreateMetadata(w http.ResponseWriter, r *http.Request) data.Data {
+	var requestPayload data.Data
 
 	err := ab.readJSON(w, r, &requestPayload)
 	if err != nil {
 		ab.errorJSON(w, err, http.StatusBadRequest)
-		return models.Data{}
+		return data.Data{}
 	}
-	data := models.Data{
+	data := data.Data{
 		Timestamp:   requestPayload.Timestamp,
 		Metadata:    requestPayload.Metadata,
 		GameResults: requestPayload.GameResults,

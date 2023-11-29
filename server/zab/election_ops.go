@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/fatih/color"
-	"github.com/tnbl265/zooweeper/database/models"
+	"github.com/tnbl265/zooweeper/request_processors/data"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -21,14 +21,14 @@ type ElectionOps struct {
 
 func (eo *ElectionOps) Ping(portStr string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var requestPayload models.HealthCheck
+		var requestPayload data.HealthCheck
 		err := eo.ab.readJSON(w, r, &requestPayload)
 		if err != nil {
 			eo.ab.errorJSON(w, err, http.StatusBadRequest)
 			return
 		}
 
-		payload := models.HealthCheck{
+		payload := data.HealthCheck{
 			Message:    "pong",
 			PortNumber: portStr,
 		}
@@ -42,7 +42,7 @@ func (eo *ElectionOps) SelfElectLeaderRequest(portStr string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		hasFailedElection := false
 
-		var requestPayload models.ElectLeaderRequest
+		var requestPayload data.ElectLeaderRequest
 		err := eo.ab.readJSON(w, r, &requestPayload)
 		if err != nil {
 			eo.ab.errorJSON(w, err, http.StatusBadRequest)
@@ -52,7 +52,7 @@ func (eo *ElectionOps) SelfElectLeaderRequest(portStr string) http.HandlerFunc {
 		incomingPortNumber, _ := strconv.Atoi(requestPayload.IncomingPort)
 		currentPortNumber, _ := strconv.Atoi(portStr)
 
-		payload := models.ElectLeaderResponse{
+		payload := data.ElectLeaderResponse{
 			IsSuccess: strconv.FormatBool(incomingPortNumber > currentPortNumber),
 		}
 		metadata, _ := eo.ab.ZTree.GetLocalMetadata()
@@ -72,7 +72,7 @@ func (eo *ElectionOps) SelfElectLeaderRequest(portStr string) http.HandlerFunc {
 				portURL := fmt.Sprintf("%s", outgoingPort)
 
 				url := fmt.Sprintf(eo.ab.BaseURL + ":" + portURL + "/electLeader")
-				var electMessage models.ElectLeaderRequest = models.ElectLeaderRequest{
+				var electMessage = data.ElectLeaderRequest{
 					IncomingPort: fmt.Sprintf("%d", currentPortNumber),
 				}
 				jsonData, _ := json.Marshal(electMessage)
@@ -97,7 +97,7 @@ func (eo *ElectionOps) SelfElectLeaderRequest(portStr string) http.HandlerFunc {
 				defer resp.Body.Close()
 				resBody, _ := ioutil.ReadAll(resp.Body)
 
-				var responseObject models.ElectLeaderResponse
+				var responseObject data.ElectLeaderResponse
 				err = json.Unmarshal(resBody, &responseObject)
 				if err != nil {
 					log.Println(err)
@@ -135,7 +135,7 @@ func (eo *ElectionOps) DeclareLeaderReceive() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		zNode, _ := eo.ab.ZTree.GetLocalMetadata()
 
-		var requestPayload models.DeclareLeaderRequest
+		var requestPayload data.DeclareLeaderRequest
 		err := eo.ab.readJSON(w, r, &requestPayload)
 		if err != nil {
 			eo.ab.errorJSON(w, err, http.StatusBadRequest)

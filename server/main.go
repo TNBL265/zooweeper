@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/tnbl265/zooweeper/request_processors/data"
 
 	"io/ioutil"
 	"log"
@@ -17,8 +18,8 @@ import (
 
 	"github.com/fatih/color"
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/tnbl265/zooweeper/database/models"
 	ensemble "github.com/tnbl265/zooweeper/ensemble"
+	"github.com/tnbl265/zooweeper/ztree"
 )
 
 func main() {
@@ -33,7 +34,7 @@ func main() {
 
 	var dbPath string
 	if port >= 8080 && port <= 8087 {
-		dbPath = fmt.Sprintf("database/zooweeper-metadata-%d.db", port-8080)
+		dbPath = fmt.Sprintf("ztree/zooweeper-metadata-%d.db", port-8080)
 	} else {
 		log.Fatalf("Only support ports 8080 to 8087")
 	}
@@ -81,7 +82,7 @@ func initZNode(server *ensemble.Server, port, leader int, allServers []int) {
 
 	allServersStr := strings.Join(result, ",")
 
-	metadata := models.Metadata{
+	metadata := ztree.Metadata{
 		NodeIp:  strconv.Itoa(port),
 		Leader:  strconv.Itoa(leader),
 		Servers: allServersStr,
@@ -102,7 +103,7 @@ func ping(server *ensemble.Server) (string, error) {
 		currentPort := zNode.NodeIp
 		//startTime := time.Now()
 
-		var healthCheck = models.HealthCheck{
+		var healthCheck = data.HealthCheck{
 			Message:    "ping!",
 			PortNumber: currentPort,
 		}
@@ -142,7 +143,7 @@ func ping(server *ensemble.Server) (string, error) {
 			if err != nil || resp == nil {
 				color.Red("Error sending ping to %s", otherPort)
 
-				errorData := models.HealthCheckError{
+				errorData := data.HealthCheckError{
 					Error:     err,
 					ErrorPort: otherPort,
 					IsWakeup:  false,
@@ -158,7 +159,7 @@ func ping(server *ensemble.Server) (string, error) {
 				log.Println(err)
 				continue
 			}
-			var responseObject models.HealthCheck
+			var responseObject data.HealthCheck
 			err = json.Unmarshal(resBody, &responseObject)
 			if err != nil {
 				log.Println(err)

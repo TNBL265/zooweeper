@@ -7,14 +7,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/fatih/color"
+	"github.com/tnbl265/zooweeper/request_processors/data"
 	"net/http"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	ztree "github.com/tnbl265/zooweeper/database"
-	"github.com/tnbl265/zooweeper/database/models"
+	"github.com/tnbl265/zooweeper/ztree"
 )
 
 type ProposalState string
@@ -44,7 +44,7 @@ type AtomicBroadcast struct {
 	Election ElectionOps
 	Sync     SyncOps
 
-	ZTree ztree.ZooWeeperDatabaseRepo
+	ZTree ztree.ZNodeHandler
 
 	// Proposal
 	ackCounter    int
@@ -58,7 +58,7 @@ type AtomicBroadcast struct {
 
 	pq PriorityQueue
 
-	ErrorLeaderChan chan models.HealthCheckError
+	ErrorLeaderChan chan data.HealthCheckError
 }
 
 func (ab *AtomicBroadcast) forwardRequestToLeader(r *http.Request) (*http.Response, error) {
@@ -69,7 +69,7 @@ func (ab *AtomicBroadcast) forwardRequestToLeader(r *http.Request) (*http.Respon
 	return client.Do(req)
 }
 
-func (ab *AtomicBroadcast) startProposal(data models.Data) {
+func (ab *AtomicBroadcast) startProposal(data data.Data) {
 	ab.SetProposalState(PROPOSED)
 
 	jsonData, _ := json.Marshal(data)
@@ -118,7 +118,7 @@ func (ab *AtomicBroadcast) syncMetadata() {
 	zNode, _ := ab.ZTree.GetLocalMetadata()
 	portsSlice := strings.Split(zNode.Servers, ",")
 
-	var metadata models.Metadata
+	var metadata ztree.Metadata
 	jsonData, _ := json.Marshal(metadata)
 
 	// send Request async
@@ -148,7 +148,7 @@ func (ab *AtomicBroadcast) syncMetadata() {
 	}
 
 	highestZNodeId, _ := ab.ZTree.GetHighestZNodeId()
-	metadata = models.Metadata{
+	metadata = ztree.Metadata{
 		NodeId: highestZNodeId,
 	}
 	jsonData, _ = json.Marshal(metadata)
@@ -175,7 +175,7 @@ func (ab *AtomicBroadcast) WakeupLeaderElection(port int) {
 		select {
 		case <-time.After(time.Second * 2):
 			// On wake-up, start leader-election
-			data := models.HealthCheckError{
+			data := data.HealthCheckError{
 				Error:     nil,
 				ErrorPort: fmt.Sprintf("%d", port),
 				IsWakeup:  true,
@@ -208,7 +208,7 @@ func (ab *AtomicBroadcast) startLeaderElection(currentPort int) {
 	portURL := fmt.Sprintf("%d", currentPort)
 
 	url := fmt.Sprintf(ab.BaseURL + ":" + portURL + "/electLeader")
-	var electMessage = models.ElectLeaderRequest{
+	var electMessage = data.ElectLeaderRequest{
 		IncomingPort: fmt.Sprintf("%d", currentPort),
 	}
 	jsonData, _ := json.Marshal(electMessage)
@@ -234,7 +234,7 @@ func (ab *AtomicBroadcast) declareLeaderRequest(portStr string, allServers []str
 		portURL := fmt.Sprintf("%s", outgoingPort)
 
 		url := fmt.Sprintf(ab.BaseURL + ":" + portURL + "/declareLeaderReceive")
-		var electMessage = models.DeclareLeaderRequest{
+		var electMessage = data.DeclareLeaderRequest{
 			IncomingPort: portStr,
 		}
 		jsonData, _ := json.Marshal(electMessage)
