@@ -27,7 +27,7 @@ func (zt *ZTree) AllMetadata() ([]*models.Metadata, error) {
 		var data models.Metadata
 		err := rows.Scan(
 			&data.NodeId, &data.NodeIp, &data.Leader, &data.Servers,
-			&data.Timestamp, &data.Attempts, &data.Version, &data.ParentId,
+			&data.Timestamp, &data.Version, &data.ParentId,
 			&data.Clients, &data.SenderIp, &data.ReceiverIp,
 		)
 		if err != nil {
@@ -42,8 +42,8 @@ func (zt *ZTree) AllMetadata() ([]*models.Metadata, error) {
 
 func (zt *ZTree) InsertMetadataWithParentId(metadata models.Metadata, parentId int) error {
 	sqlStatement := `
-	INSERT INTO ZNode (NodeIp, Leader, Servers, Timestamp, Attempts, Version, ParentId, Clients, SenderIp, ReceiverIp) 
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+	INSERT INTO ZNode (NodeIp, Leader, Servers, Timestamp, Version, ParentId, Clients, SenderIp, ReceiverIp) 
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
 `
 
 	row, err := zt.DB.Prepare(sqlStatement)
@@ -55,7 +55,7 @@ func (zt *ZTree) InsertMetadataWithParentId(metadata models.Metadata, parentId i
 
 	_, err = row.Exec(
 		metadata.NodeIp, metadata.Leader, metadata.Servers, metadata.Timestamp,
-		metadata.Attempts, metadata.Version, parentId,
+		metadata.Version, parentId,
 		metadata.Clients, metadata.SenderIp, metadata.ReceiverIp,
 	)
 	if err != nil {
@@ -110,10 +110,10 @@ func (zt *ZTree) GetClients(client string) ([]string, error) {
 
 func (zt *ZTree) InsertMetadata(metadata models.Metadata) error {
 	sqlInsert := `
-        INSERT INTO ZNode (NodeId, NodeIp, Leader, Servers, Timestamp, Attempts, Version, ParentId, Clients, SenderIp, ReceiverIp)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO ZNode (NodeId, NodeIp, Leader, Servers, Timestamp, Version, ParentId, Clients, SenderIp, ReceiverIp)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `
-	_, err := zt.DB.Exec(sqlInsert, metadata.NodeId, metadata.NodeIp, metadata.Leader, metadata.Servers, metadata.Timestamp, metadata.Attempts, metadata.Version, metadata.ParentId, metadata.Clients, metadata.SenderIp, metadata.ReceiverIp)
+	_, err := zt.DB.Exec(sqlInsert, metadata.NodeId, metadata.NodeIp, metadata.Leader, metadata.Servers, metadata.Timestamp, metadata.Version, metadata.ParentId, metadata.Clients, metadata.SenderIp, metadata.ReceiverIp)
 	return err
 }
 
