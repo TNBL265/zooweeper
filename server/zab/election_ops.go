@@ -58,7 +58,7 @@ func (eo *ElectionOps) SelfElectLeaderRequest(portStr string) http.HandlerFunc {
 		metadata, _ := eo.ab.ZTree.GetLocalMetadata()
 		allServers := strings.Split(metadata.Servers, ",")
 
-		// If it has a better node number than the incoming one, send a value updwards to all nodes higher than it.
+		// If it has a better node number than the incoming one, send a value upwards to all nodes higher than it.
 		if incomingPortNumber <= currentPortNumber {
 			// Send self elect message to all nodes that is higher than current node
 			for _, outgoingPort := range allServers {
@@ -122,21 +122,28 @@ func (eo *ElectionOps) SelfElectLeaderRequest(portStr string) http.HandlerFunc {
 		// Declare itself leader to all other nodes if node succeeds
 		if !hasFailedElection {
 			eo.ab.declareLeaderRequest(portStr, allServers)
-			eo.ab.syncMetadata()
 		}
 		_ = eo.ab.writeJSON(w, http.StatusOK, payload)
+
+		// Sync metadata on restart
+		eo.ab.syncMetadata()
 	}
 }
 
 // DeclareLeaderReceive send response to all other nodes that incoming port is a leader.
 func (eo *ElectionOps) DeclareLeaderReceive() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		zNode, _ := eo.ab.ZTree.GetLocalMetadata()
+
 		var requestPayload models.DeclareLeaderRequest
 		err := eo.ab.readJSON(w, r, &requestPayload)
 		if err != nil {
 			eo.ab.errorJSON(w, err, http.StatusBadRequest)
 			return
 		}
-		eo.ab.ZTree.UpdateFirstLeader(requestPayload.IncomingPort)
+
+		leaderPort := requestPayload.IncomingPort
+		color.Cyan("%s updating Leader to %s", zNode.NodeIp, leaderPort)
+		eo.ab.ZTree.UpdateFirstLeader(leaderPort)
 	}
 }
