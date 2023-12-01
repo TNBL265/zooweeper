@@ -36,12 +36,12 @@ let db = new sqlite3.Database(dbPath, (err) => {
 
 // Create 'events' table if it doesn't exist
 let createTableSql = `
-CREATE TABLE IF NOT EXISTS events (
-  Minute INT NOT NULL,
-  Player TEXT NOT NULL,
-  Club TEXT NOT NULL,
-  Score TEXT NOT NULL
-);`;
+  CREATE TABLE IF NOT EXISTS events (
+                                      Minute INT NOT NULL,
+                                      Player TEXT NOT NULL,
+                                      Club TEXT NOT NULL,
+                                      Score TEXT NOT NULL
+  );`;
 
 db.run(createTableSql, (err) => {
   if (err) {
@@ -70,6 +70,7 @@ app.post("/addScore", (req, res) => {
         handleRequestError(assignedPort, incomingScore, z_ports, res);
       });
 });
+
 function getAssignedPort(req) {
   if (req.body && req.body.metadata && req.body.metadata.ReceiverIp) {
     return parseInt(req.body.metadata.ReceiverIp, 10);
@@ -189,6 +190,7 @@ app.post("/updateScore", (req, res) => {
   } catch {
     db.rollback();
   }
+
   res.status(200).send("Score Updated");
 });
 

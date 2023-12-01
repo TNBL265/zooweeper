@@ -14,7 +14,7 @@
 ### Health Check
 ![](assets/health_check.jpg)
 #### a. Ping Pong
-![](assets/ping_pong_left.gif)
+![](assets/ping_pong.gif)
 For health check, we use a simple ping pong mechanism. Every second, each node will send a ping to other nodes in the cluster to check if they are alive.
 If a node does not receive a pong back from a node.
 - a. If the node it does not receive a pong from is a leader, it will start a leader election to elect a new leader.
@@ -33,8 +33,7 @@ If a node does not receive a pong back from a node.
 ![](assets/killing_follower.gif)
 
 ### Write/Read Request
-![](assets/kafka_write_read.jpg)
-
+![](assets/kafka_read_write.jpg)
 
 ## ZooKeeper Internals
 ### 1. Data Synchronization: [./server/zab](./server/zab/zab.go)
@@ -57,8 +56,10 @@ If a node does not receive a pong back from a node.
 ![](assets/follower_propose.gif)
 ### 2. Distributed Coordination
 ### 3. Fault Tolerance
-#### a. Kill Leader & Revive
-![](assets/fault_recover_leader_sync.gif)
+#### a. Kill Leader (Permanent Fault)
+![](assets/permanent_fault.gif)
+#### b. Kill Leader and Revive (Intermittent Fault)
+![](assets/revival_1.gif)
 
 ### 4. Scalability
 As the number of nodes increases, the corresponding rise in time is not notably significant.
