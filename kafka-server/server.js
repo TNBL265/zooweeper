@@ -70,7 +70,6 @@ app.post("/addScore", (req, res) => {
         handleRequestError(assignedPort, incomingScore, z_ports, res);
       });
 });
-
 function getAssignedPort(req) {
   if (req.body && req.body.metadata && req.body.metadata.ReceiverIp) {
     return parseInt(req.body.metadata.ReceiverIp, 10);
@@ -190,7 +189,6 @@ app.post("/updateScore", (req, res) => {
   } catch {
     db.rollback();
   }
-
   res.status(200).send("Score Updated");
 });
 

@@ -26,35 +26,10 @@ generate_score() {
   echo "${team1}-${team2}"
 }
 
-send_post_request() {
-  local ip=$1
-  local minute=$2
-  local player=$3
-  local club=$4
-  local score=$5
+# Record the start time with nanoseconds before the loop
+start_time=$(date +%s.%N)
 
-  local payload=$(cat <<EOF
-{
-    "metadata": {
-      "ReceiverIp": "$ip",
-      "Clients": "$clients"
-    },
-    "gameResults": {
-        "Minute": $minute,
-        "Player": "$player",
-        "Club": "$club",
-        "Score": "$score"
-    }
-}
-EOF
-)
-
-  # Use curl to send a POST request
-  curl -X POST "$base_url" \
-       -H "Content-Type: application/json" \
-       -d "$payload"
-}
-
+# Loop for sending requests
 minute=1
 
 for i in $(seq 1 "$num_requests"); do
@@ -64,7 +39,31 @@ for i in $(seq 1 "$num_requests"); do
   club=${clubs[$RANDOM % ${#clubs[@]}]}
   score=$(generate_score)
 
-  send_post_request "$receiver_ip" $minute "$name" "$club" "$score"
+  # Use curl to send the request and capture the response
+  response=$(curl -s -X POST "$base_url" \
+       -H "Content-Type: application/json" \
+       -d "$(cat <<EOF
+{
+    "metadata": {
+      "ReceiverIp": "$receiver_ip",
+      "Clients": "$clients"
+    },
+    "gameResults": {
+        "Minute": $minute,
+        "Player": "$name",
+        "Club": "$club",
+        "Score": "$score"
+    }
+}
+EOF
+)")
+
+  # Check if the response contains "OK"
+  if echo "$response" | grep -q "OK"; then
+    echo "Received OK response for request $i."
+  else
+    echo "Received unexpected response for request $i: $response"
+  fi
 
   minute=$((minute + 1))
   if [ $minute -gt 90 ]; then
@@ -72,4 +71,11 @@ for i in $(seq 1 "$num_requests"); do
   fi
 done
 
+# Record the end time with nanoseconds after the last request
+end_time=$(date +%s.%N)
+
+# Calculate the total time taken with nanoseconds precision using awk
+total_time_seconds=$(awk "BEGIN {print $end_time - $start_time}")
+
+echo "Total time taken for $num_requests requests: $total_time_seconds seconds"
 echo "Requests sent."

@@ -9,6 +9,32 @@
 
 ### Implementation Focus (Checkpoint 2)
 ![](assets/request_processor_flow.png)
+![](assets/usual_scenario.gif)
+
+### Health Check
+![](assets/health_check.jpg)
+#### a. Ping Pong
+![](assets/ping_pong_left.gif)
+For health check, we use a simple ping pong mechanism. Every second, each node will send a ping to other nodes in the cluster to check if they are alive.
+If a node does not receive a pong back from a node.
+- a. If the node it does not receive a pong from is a leader, it will start a leader election to elect a new leader.
+- b. If the node it does not receive a pong from is a follower, it will remove the follower from its list of followers.
+
+
+### Leader Election
+![](assets/leader_election.jpg)
+#### a. Leader Election Single Port
+![](assets/solo_leader_election.gif)
+#### b. Leader Election Multiple Ports
+![](assets/leader_election_multiple_ports.gif)
+#### c. Killing Leader
+![](assets/killing_leader.gif)
+#### d. Killing Follower
+![](assets/killing_follower.gif)
+
+### Write/Read Request
+![](assets/kafka_write_read.jpg)
+
 
 ## ZooKeeper Internals
 ### 1. Data Synchronization: [./server/zab](./server/zab/zab.go)
@@ -25,8 +51,25 @@
   - assumption: no clock synchronization issue between Clients
 #### Linearization Write and FIFO Client Order
 - By ensuring 3 properties above
+#### Case 1: Client (Kafka-Server) Request to Leader: Proposal, Ack, Commit
+![](assets/leader_propose.gif)
+#### Case 2: Client (Kafka-Server) Request to Follower: Forward, Proposal, Ack, Commit
+![](assets/follower_propose.gif)
 ### 2. Distributed Coordination
 ### 3. Fault Tolerance
+#### a. Kill Leader & Revive
+![](assets/fault_recover_leader_sync.gif)
+
+### 4. Scalability
+As the number of nodes increases, the corresponding rise in time is not notably significant.
+
+| No. of Nodes | 1 Request | 10 Requests | 100 Requests |
+|--------------|-----------|-------------|--------------|
+| 3            | 0.261195  | 2.22739     | 21.3898      |
+| 5            | 0.326156  | 2.26135     | 22.5576      |
+| 7            | 0.337329  | 2.40302     | 23.191       |
+| 9            | 0.333107  | 2.48438     | 24.343       |
+
 
 ## Local development
 ### Postman
@@ -74,6 +117,7 @@ PORT=3000 npm start
 cd zooweeper
 ./send_requests.sh 10 9090 "9090,9091,9092"
 ```
+
 
 ## References:
 - [Zookeeper Internals](https://zookeeper.apache.org/doc/r3.9.0/zookeeperInternals.html)
