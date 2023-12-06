@@ -11,7 +11,11 @@
 ![](assets/request_processor_flow.png)
 ![](assets/usual_scenario.gif)
 ### Forwarding 100 requests to followers and leaders respectively
+#### Random
+![](assets/100random.gif)
+#### 100 Requests to followers
 ![](assets/100followers.gif)
+#### 100 Requests to leaders
 ![](assets/100leaders.gif)
 
 ### Health Check
