@@ -1,18 +1,19 @@
 #!/bin/bash
 
-if [ "$#" -ne 3 ]; then
-    echo "Usage: $0 <num_zooweeper> <num_kafka> <num_react>"
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 <num_server>"
     exit 1
 fi
 
 num_zooweeper=$1
-num_kafka=$2
-num_react=$3
+
+num_kafka=3
+num_frontend=2
 base_url="http://host.docker.internal"
 
 zooweeper_services=""
 kafka_services=""
-react_services=""
+frontend_services=""
 
 # ZooWeeper services
 start_port=8080
@@ -39,20 +40,20 @@ for i in $(seq 0 $(($num_zooweeper - 1))); do
       - \"$port:$port\""
 done
 
-# Kafka-Server services
+# Kafka broker services
 for i in $(seq 0 $(($num_kafka - 1))); do
     port=909$(($i))
     if [ $i -eq 0 ]; then
         build="build:
-      context: ./kafka-server
+      context: ./kafka-broker
       dockerfile: Dockerfile"
     else
         build=""
     fi
     kafka_services+="
-  kafka-server-$i:
+  kafka-broker-$i:
     $build
-    image: kafka_server:latest
+    image: kafka_broker:latest
     environment:
       - PORT=$port
       - BASE_URL=$base_url
@@ -60,20 +61,20 @@ for i in $(seq 0 $(($num_kafka - 1))); do
       - \"$port:$port\""
 done
 
-# Kafka-React-App services
-for i in $(seq 0 $(($num_react - 1))); do
+# Frontend services
+for i in $(seq 0 $(($num_frontend - 1))); do
     port=300$(($i))
     if [ $i -eq 0 ]; then
         build="build:
-      context: ./kafka-react-app
+      context: ./frontend
       dockerfile: Dockerfile"
     else
         build=""
     fi
-    react_services+="
-  kafka-react-app-$i:
+    frontend_services+="
+  frontend-$i:
     $build
-    image: kafka_react_app:latest
+    image: frontend:latest
     environment:
       - PORT=$port
       - BASE_URL=$base_url
@@ -90,7 +91,7 @@ $zooweeper_services
 
 $kafka_services
 
-$react_services
+$frontend_services
 EOF
 
 echo "docker-compose.yml file generated successfully."

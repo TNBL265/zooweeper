@@ -20,7 +20,7 @@ func (wo *WriteOps) WriteMetadata(w http.ResponseWriter, r *http.Request) {
 	data := wo.ab.CreateMetadataFromPayload(w, r)
 	wo.ab.ZTree.InsertMetadataWithParent(data.Metadata)
 
-	// Only modify Kafka-Server metadata if it is a leader
+	// Only modify Kafka broker metadata if it is a leader
 	zNode, _ := wo.ab.ZTree.GetLocalMetadata()
 	if zNode.NodePort == zNode.Leader {
 		ports, _ := wo.ab.ZTree.GetClients(data.Metadata.SenderIp)

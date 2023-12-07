@@ -13,10 +13,10 @@ function DataDisplay() {
     };
 
     const port = getRandomPort();
-    console.log("Kafka Server: ", port);
+    console.log("Kafka Broker: ", port);
 
     useEffect(() => {
-        // HTTP GET request to your Kafka server's /data endpoint
+        // HTTP GET request to your Kafka broker's /data endpoint
         axios
             .get(`${base_url}:${port}/data`)
             .then((response) => {
@@ -29,7 +29,7 @@ function DataDisplay() {
 
     return (
         <div>
-            <h1>Data Display from Kafka Server</h1>
+            <h1>Ordered List of Football Goals Timeline</h1>
             <ul>
                 {data.map((item, index) => (
                     <li key={index}>

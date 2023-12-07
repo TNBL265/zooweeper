@@ -2,7 +2,6 @@ package zab
 
 import (
 	"bytes"
-	"container/heap"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -91,9 +90,6 @@ func NewAtomicBroadcast(dbPath string) *AtomicBroadcast {
 	ab.proposalState = COMMITTED
 
 	ab.ErrorLeaderChan = make(chan data.HealthCheckError)
-
-	ab.pq = make(PriorityQueue, 0)
-	heap.Init(&ab.pq)
 
 	ab.ZTree.InitializeDB()
 	return ab

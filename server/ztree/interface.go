@@ -3,14 +3,14 @@
 // 1. Instead of using the filesystem, we implemented the data model and hierarchical namespace using sqlite
 // - each row is a ZNode storing Metadata
 // - the field ParentId will represent the hierarchical relationship
-// 2. (Use-case specific) We only support Regular (permanent) ZNode, no Ephemeral ZNode
+// 2. (Use-case specific) We only support Regular/Permanent ZNode, no Sequential or Ephemeral ZNode
 // 3. Metadata fields in ZNode:
 // - NodeId (int): similar to zxid, representing metadata transaction (1st NodeId is a self-identified by design)
 // - NodePort (string): the port of the current ZooWeeper server (808x by design)
 // - Leader (string): the port  of the current leader in the ensemble (highest NodePort by design)
 // - Servers (string): comma-separated list of the ports of all ZooWeeper servers in the ensemble
 // - Timestamp (string): timestamp at which this ZNode is created
-// - Version (int): keep track of ZNode changes
+// - Version (int): keep track of ZNode changes, incremented when a Transaction modify metadata for Kafka cluster ("Clients" field below)
 // - ParentId (int): NodeId of parent ZNode
 // - Clients (string): (Use-case specific) comma-separated list of the ports of all clients (Kafka-Server) that use our ZooWeeper service
 // - SenderIp (string): (Use-case specific) the port of the client (Kafka-Server) that sent the Write Request

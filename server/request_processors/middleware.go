@@ -1,4 +1,4 @@
-package zab
+package request_processors
 
 import (
 	"bytes"
@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"github.com/fatih/color"
 	"github.com/tnbl265/zooweeper/request_processors/data"
+	"github.com/tnbl265/zooweeper/zab"
 	"io"
 	"io/ioutil"
 	"log"
@@ -13,47 +14,8 @@ import (
 	"time"
 )
 
-// RequestItem with Timestamp field for ordering in PriorityQueue
-type RequestItem struct {
-	Request   *http.Request
-	Timestamp string
-}
-
-// PriorityQueue of RequestItem to be used by QueueMiddleware
-type PriorityQueue []*RequestItem
-
-func (pq PriorityQueue) Len() int { return len(pq) }
-
-func (pq PriorityQueue) Less(i, j int) bool {
-	return pq[i].Timestamp < pq[j].Timestamp
-}
-
-func (pq PriorityQueue) Swap(i, j int) {
-	pq[i], pq[j] = pq[j], pq[i]
-}
-
-func (pq *PriorityQueue) Push(x interface{}) {
-	item := x.(*RequestItem)
-	*pq = append(*pq, item)
-}
-
-func (pq *PriorityQueue) Pop() interface{} {
-	old := *pq
-	n := len(old)
-	item := old[n-1]
-	*pq = old[0 : n-1]
-	return item
-}
-
-func (pq *PriorityQueue) Peek() *RequestItem {
-	if len(*pq) == 0 {
-		return nil
-	}
-	return (*pq)[0]
-}
-
-// QueueMiddleware to order RequestItem using PriorityQueue
-func (ab *AtomicBroadcast) QueueMiddleware(next http.Handler) http.Handler {
+// QueueMiddleware to order Transaction using PriorityQueue
+func (rp *RequestProcessor) QueueMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Extract the timestamp
 		timestamp, _ := func(r *http.Request) (string, error) {
@@ -79,23 +41,23 @@ func (ab *AtomicBroadcast) QueueMiddleware(next http.Handler) http.Handler {
 		}(r)
 
 		// Use minPriorityQueue to ensure FIFO Client Order
-		item := &RequestItem{
+		item := &Transaction{
 			Request:   r,
 			Timestamp: timestamp,
 		}
-		heap.Push(&ab.pq, item)
-		for ab.pq.Peek() != item {
+		heap.Push(&rp.pq, item)
+		for rp.pq.Peek() != item {
 			time.Sleep(time.Second)
 		}
 		next.ServeHTTP(w, r)
-		heap.Pop(&ab.pq)
+		heap.Pop(&rp.pq)
 	})
 }
 
-// WriteOpsMiddleware to establish some form of Total Order for RequestItem using PriorityQueue
-func (wo *WriteOps) WriteOpsMiddleware(http.Handler) http.Handler {
+// WriteOpsMiddleware to establish some form of Total Order for Transaction using PriorityQueue
+func (rp *RequestProcessor) WriteOpsMiddleware(http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		zNode, err := wo.ab.ZTree.GetLocalMetadata()
+		zNode, err := rp.Zab.ZTree.GetLocalMetadata()
 		if err != nil {
 			log.Println("WriteOpsMiddleware Error:", err)
 			return
@@ -104,7 +66,7 @@ func (wo *WriteOps) WriteOpsMiddleware(http.Handler) http.Handler {
 		if zNode.NodePort != zNode.Leader {
 			// Follower will forward Request to Leader
 			color.HiBlue("%s forwarding request to leader %s", zNode.NodePort, zNode.Leader)
-			resp, err := wo.ab.forwardRequestToLeader(r)
+			resp, err := rp.Zab.ForwardRequestToLeader(r)
 			if err != nil {
 				// Handle error
 				http.Error(w, "Failed to forward request", http.StatusInternalServerError)
@@ -123,12 +85,12 @@ func (wo *WriteOps) WriteOpsMiddleware(http.Handler) http.Handler {
 			return
 		} else {
 			// Leader will Propose, wait for Acknowledge, before Commit
-			data := wo.ab.CreateMetadataFromPayload(w, r)
-			for wo.ab.ProposalState() != COMMITTED {
+			data := rp.Zab.CreateMetadataFromPayload(w, r)
+			for rp.Zab.ProposalState() != zab.COMMITTED {
 				// Propose in sequence to ensure Linearization Write
 				time.Sleep(time.Second)
 			}
-			wo.ab.startProposal(data)
+			rp.Zab.StartProposal(data)
 			return
 		}
 	})

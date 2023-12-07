@@ -13,13 +13,13 @@ let port = process.env.PORT || "9090";
 let dbPath;
 switch (port) {
   case "9090":
-    dbPath = 'kafka-events-0.db';
+    dbPath = 'kafka-broker-events-0.db';
     break;
   case "9091":
-    dbPath = 'kafka-events-1.db';
+    dbPath = 'kafka-broker-events-1.db';
     break;
   case "9092":
-    dbPath = 'kafka-events-2.db';
+    dbPath = 'kafka-broker-events-2.db';
     break;
   default:
     console.error('Unsupported port:', port);

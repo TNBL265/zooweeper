@@ -7,7 +7,7 @@ fi
 
 num_requests=$1
 
-# Kafka Server random choices
+# Kafka broker random choices
 ports=(9090 9091 9092)
 selected_port=${ports[$RANDOM % ${#ports[@]}]}
 

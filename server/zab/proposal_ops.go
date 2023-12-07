@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// ProposalOps for 2PC of Write Request (Ref: Active Messaging in https://zookeeper.apache.org/doc/current/zookeeperInternals.html)
+// ProposalOps for 2PC of Write Request (Ref: Active Messaging in https://zookeeper.apache.org/doc/current/zookeeperInternals.html#sc_activeMessaging)
 type ProposalOps struct {
 	ab *AtomicBroadcast
 }
