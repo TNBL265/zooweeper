@@ -204,7 +204,6 @@ func (ab *AtomicBroadcast) StartProposal(data data.Data) {
 	if err != nil {
 		color.Red("Error committing write metadata:", err)
 	}
-	ab.SetProposalState(COMMITTED)
 }
 
 // syncMetadata for new leader to sync its transaction log on joining or restart

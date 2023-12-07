@@ -32,4 +32,5 @@ func (wo *WriteOps) WriteMetadata(w http.ResponseWriter, r *http.Request) {
 	}
 
 	wo.ab.writeJSON(w, http.StatusOK, data)
+	wo.ab.SetProposalState(COMMITTED)
 }
