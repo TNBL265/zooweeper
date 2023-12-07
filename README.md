@@ -10,6 +10,13 @@
 ### Implementation Focus (Checkpoint 2)
 ![](assets/request_processor_flow.png)
 ![](assets/usual_scenario.gif)
+### Forwarding 100 requests to followers and leaders respectively
+#### Random
+![](assets/100random.gif)
+#### 100 Requests to followers
+![](assets/100followers.gif)
+#### 100 Requests to leaders
+![](assets/100leaders.gif)
 
 ### Health Check
 ![](assets/health_check.jpg)
@@ -60,6 +67,10 @@ If a node does not receive a pong back from a node.
 ![](assets/permanent_fault.gif)
 #### b. Kill Leader and Revive (Intermittent Fault)
 ![](assets/revival_1.gif)
+#### c. Kill Kafka Server
+![](assets/kill_kafka.gif)
+#### d. Kill React Client
+![](assets/kill_react.gif)
 
 ### 4. Scalability
 As the number of nodes increases, the corresponding rise in time is not notably significant.
