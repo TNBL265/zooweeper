@@ -1,6 +1,6 @@
 # ZooWeeper: [50.041 Distributed System and Computing](https://istd.sutd.edu.sg/undergraduate/courses/50041-distributed-systems-computing/)
 
-> This README only shows the system architecture, protocol overview and testing scenarios. A more detailed report can be found [here]().
+> This README only shows the system architecture, protocol overview and testing scenarios. A more detailed report can be found [here](assets/Group9_DSC_FinalReport.pdf).
 ## 0. System Architecture
 We designed an end-to-end producer-consumer Kafka use case - **Ordered List of Football Goals Timeline** consisting of 4 main components:
 1. **ZooWeeper**:
